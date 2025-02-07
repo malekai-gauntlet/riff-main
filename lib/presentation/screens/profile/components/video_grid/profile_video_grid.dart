@@ -152,7 +152,7 @@ class _ProfileVideoGridState extends State<ProfileVideoGrid> {
     // TODO: Implement tutorials grid
     return const Center(
       child: Text(
-        'Tutorials coming soon',
+        'Tutorials coming soon!',
         style: TextStyle(color: Colors.black54),
       ),
     );

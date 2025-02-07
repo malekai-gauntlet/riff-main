@@ -189,7 +189,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
           ),
 
           // Quick Reactions
-          Container(
+          /* Container(
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
@@ -216,12 +216,12 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                 ),
               )).toList(),
             ),
-          ),
+          ), */
 
           // Comment Input
           Container(
             padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 10,
               left: 16,
               right: 16,
               top: 8,
