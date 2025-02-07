@@ -16,7 +16,14 @@ class FeedToggle extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildToggleButton('Following', 0),
+        // _buildToggleButton('Following', 0),
+        // const SizedBox(width: 24),
+        
+        _buildToggleButton('Electric', 4),
+        const SizedBox(width: 24),
+        _buildToggleButton('Fingerstyle', 3),
+        const SizedBox(width: 24),
+        _buildToggleButton('Acoustic', 2),
         const SizedBox(width: 24),
         _buildToggleButton('For You', 1),
       ],
@@ -39,8 +46,10 @@ class FeedToggle extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          // Indicator line
-          Container(
+          // Animated indicator line
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             width: 24,
             height: 2,
             decoration: BoxDecoration(
