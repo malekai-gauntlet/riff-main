@@ -40,7 +40,7 @@ class FeedToggle extends StatelessWidget {
           Text(
             text,
             style: TextStyle(
-              color: Colors.white,
+              color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
               fontSize: 16,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
