@@ -29,6 +29,7 @@ mixin _$Video {
   int get viewCount => throw _privateConstructorUsedError;
   int get likeCount => throw _privateConstructorUsedError;
   int get playCount => throw _privateConstructorUsedError;
+  int get commentCount => throw _privateConstructorUsedError;
   List<String> get tags => throw _privateConstructorUsedError;
   List<String> get savedByUsers => throw _privateConstructorUsedError;
   List<String> get likedByUsers => throw _privateConstructorUsedError;
@@ -59,6 +60,7 @@ abstract class $VideoCopyWith<$Res> {
       int viewCount,
       int likeCount,
       int playCount,
+      int commentCount,
       List<String> tags,
       List<String> savedByUsers,
       List<String> likedByUsers,
@@ -90,6 +92,7 @@ class _$VideoCopyWithImpl<$Res, $Val extends Video>
     Object? viewCount = null,
     Object? likeCount = null,
     Object? playCount = null,
+    Object? commentCount = null,
     Object? tags = null,
     Object? savedByUsers = null,
     Object? likedByUsers = null,
@@ -133,6 +136,10 @@ class _$VideoCopyWithImpl<$Res, $Val extends Video>
           ? _value.playCount
           : playCount // ignore: cast_nullable_to_non_nullable
               as int,
+      commentCount: null == commentCount
+          ? _value.commentCount
+          : commentCount // ignore: cast_nullable_to_non_nullable
+              as int,
       tags: null == tags
           ? _value.tags
           : tags // ignore: cast_nullable_to_non_nullable
@@ -174,6 +181,7 @@ abstract class _$$VideoImplCopyWith<$Res> implements $VideoCopyWith<$Res> {
       int viewCount,
       int likeCount,
       int playCount,
+      int commentCount,
       List<String> tags,
       List<String> savedByUsers,
       List<String> likedByUsers,
@@ -203,6 +211,7 @@ class __$$VideoImplCopyWithImpl<$Res>
     Object? viewCount = null,
     Object? likeCount = null,
     Object? playCount = null,
+    Object? commentCount = null,
     Object? tags = null,
     Object? savedByUsers = null,
     Object? likedByUsers = null,
@@ -246,6 +255,10 @@ class __$$VideoImplCopyWithImpl<$Res>
           ? _value.playCount
           : playCount // ignore: cast_nullable_to_non_nullable
               as int,
+      commentCount: null == commentCount
+          ? _value.commentCount
+          : commentCount // ignore: cast_nullable_to_non_nullable
+              as int,
       tags: null == tags
           ? _value._tags
           : tags // ignore: cast_nullable_to_non_nullable
@@ -283,6 +296,7 @@ class _$VideoImpl implements _Video {
       this.viewCount = 0,
       this.likeCount = 0,
       this.playCount = 0,
+      this.commentCount = 0,
       final List<String> tags = const [],
       final List<String> savedByUsers = const [],
       final List<String> likedByUsers = const [],
@@ -317,6 +331,9 @@ class _$VideoImpl implements _Video {
   @override
   @JsonKey()
   final int playCount;
+  @override
+  @JsonKey()
+  final int commentCount;
   final List<String> _tags;
   @override
   @JsonKey()
@@ -358,7 +375,7 @@ class _$VideoImpl implements _Video {
 
   @override
   String toString() {
-    return 'Video(id: $id, url: $url, thumbnailUrl: $thumbnailUrl, title: $title, description: $description, creatorId: $creatorId, viewCount: $viewCount, likeCount: $likeCount, playCount: $playCount, tags: $tags, savedByUsers: $savedByUsers, likedByUsers: $likedByUsers, tutorials: $tutorials, createdAt: $createdAt)';
+    return 'Video(id: $id, url: $url, thumbnailUrl: $thumbnailUrl, title: $title, description: $description, creatorId: $creatorId, viewCount: $viewCount, likeCount: $likeCount, playCount: $playCount, commentCount: $commentCount, tags: $tags, savedByUsers: $savedByUsers, likedByUsers: $likedByUsers, tutorials: $tutorials, createdAt: $createdAt)';
   }
 
   @override
@@ -381,6 +398,8 @@ class _$VideoImpl implements _Video {
                 other.likeCount == likeCount) &&
             (identical(other.playCount, playCount) ||
                 other.playCount == playCount) &&
+            (identical(other.commentCount, commentCount) ||
+                other.commentCount == commentCount) &&
             const DeepCollectionEquality().equals(other._tags, _tags) &&
             const DeepCollectionEquality()
                 .equals(other._savedByUsers, _savedByUsers) &&
@@ -405,6 +424,7 @@ class _$VideoImpl implements _Video {
       viewCount,
       likeCount,
       playCount,
+      commentCount,
       const DeepCollectionEquality().hash(_tags),
       const DeepCollectionEquality().hash(_savedByUsers),
       const DeepCollectionEquality().hash(_likedByUsers),
@@ -438,6 +458,7 @@ abstract class _Video implements Video {
       final int viewCount,
       final int likeCount,
       final int playCount,
+      final int commentCount,
       final List<String> tags,
       final List<String> savedByUsers,
       final List<String> likedByUsers,
@@ -464,6 +485,8 @@ abstract class _Video implements Video {
   int get likeCount;
   @override
   int get playCount;
+  @override
+  int get commentCount;
   @override
   List<String> get tags;
   @override

@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import '../comment/comment_bottom_sheet.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../../domain/comment/comment_repository.dart';
 
 // Convert to StatefulWidget for local state management
 class VideoActionButtons extends StatefulWidget {
@@ -25,12 +26,15 @@ class VideoActionButtons extends StatefulWidget {
 
 class _VideoActionButtonsState extends State<VideoActionButtons> {
   final VideoRepository _videoRepository = VideoRepository();
+  final CommentRepository _commentRepository = CommentRepository();
   
   // Local state to track saved and liked status
   bool? _optimisticIsSaved;
   bool? _optimisticIsLiked;
   // Add optimistic like count
   int? _optimisticLikeCount;
+  // Add comment count
+  int _commentCount = 0;
   
   // Get current user ID
   String? get _currentUserId => FirebaseAuth.instance.currentUser?.uid;
@@ -50,6 +54,30 @@ class _VideoActionButtonsState extends State<VideoActionButtons> {
   // Get current like count with optimistic value
   int get _likeCount {
     return _optimisticLikeCount ?? widget.video.likeCount;
+  }
+
+  // Get current save count
+  int get _saveCount {
+    return widget.video.savedByUsers.length;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCommentCount();
+  }
+
+  Future<void> _loadCommentCount() async {
+    try {
+      final count = await _commentRepository.getCommentCount(widget.video.id);
+      if (mounted) {
+        setState(() {
+          _commentCount = count;
+        });
+      }
+    } catch (e) {
+      print('Error loading comment count: $e');
+    }
   }
 
   void _showComments(BuildContext context) {
@@ -132,7 +160,7 @@ class _VideoActionButtonsState extends State<VideoActionButtons> {
               color: _isSaved ? Colors.blue : Colors.white,
               size: 32,
             ),
-            label: _isSaved ? 'Saved' : 'Save',
+            label: _saveCount.toString(),
             onTap: () async {
               final userId = _currentUserId;
               if (userId == null) {
@@ -175,18 +203,21 @@ class _VideoActionButtonsState extends State<VideoActionButtons> {
             },
           ),
           // Comment Button
-          _ActionButton(
-            icon: const Icon(
-              Icons.chat_bubble_outline,
-              color: Colors.white,
-              size: 24,
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: _ActionButton(
+              icon: const Icon(
+                Icons.chat_bubble_outline,
+                color: Colors.white,
+                size: 24,
+              ),
+              label: _commentCount.toString(),
+              onTap: () {
+                // Pause the video when opening comments
+                widget.controller?.pause();
+                _showComments(context);
+              },
             ),
-            label: 'Comments',
-            onTap: () {
-              // Pause the video when opening comments
-              widget.controller?.pause();
-              _showComments(context);
-            },
           ),
           // Tutorial Button
           _ActionButton(
@@ -254,7 +285,17 @@ class _ActionButton extends StatelessWidget {
           onTap: onTap,
           child: icon,
         ),
-        const SizedBox(height: 15), // Increased from 12 to 15
+        const SizedBox(height: 3), // Reduced space between icon and number
+        if (label != 'Tutorial') // Don't show numbers for tutorial button
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        const SizedBox(height: 12), // Space between button groups
       ],
     );
   }

@@ -16,6 +16,7 @@ _$VideoImpl _$$VideoImplFromJson(Map<String, dynamic> json) => _$VideoImpl(
       viewCount: (json['viewCount'] as num?)?.toInt() ?? 0,
       likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
       playCount: (json['playCount'] as num?)?.toInt() ?? 0,
+      commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
       tags:
           (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
@@ -45,6 +46,7 @@ Map<String, dynamic> _$$VideoImplToJson(_$VideoImpl instance) =>
       'viewCount': instance.viewCount,
       'likeCount': instance.likeCount,
       'playCount': instance.playCount,
+      'commentCount': instance.commentCount,
       'tags': instance.tags,
       'savedByUsers': instance.savedByUsers,
       'likedByUsers': instance.likedByUsers,

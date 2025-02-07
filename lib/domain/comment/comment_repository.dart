@@ -9,6 +9,17 @@ class CommentRepository {
     return _firestore.collection('videos').doc(videoId).collection('comments');
   }
 
+  // Get comment count for a video
+  Future<int> getCommentCount(String videoId) async {
+    try {
+      final snapshot = await _commentsRef(videoId).count().get();
+      return snapshot.count ?? 0;  // Handle nullable count
+    } catch (e) {
+      print('Error getting comment count: $e');
+      return 0; // Return 0 if there's an error
+    }
+  }
+
   // Get comments for a video with pagination
   Future<List<Comment>> getComments(String videoId, {
     int limit = 15,
