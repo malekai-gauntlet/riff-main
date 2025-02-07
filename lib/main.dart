@@ -95,7 +95,7 @@ class _HomePageState extends State<HomePage> {
       case 0: // Home
         return Stack(
           children: [
-            const FeedScreen(), // Use our new FeedScreen
+            FeedScreen(selectedGenre: _selectedFeedIndex),
             Positioned(
               top: MediaQuery.of(context).padding.top + 10,
               left: 0,

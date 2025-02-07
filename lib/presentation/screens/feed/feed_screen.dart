@@ -7,7 +7,12 @@ import '../../../domain/video/electric_video_sequence.dart';
 import '../../physics/one_page_scroll_physics.dart';
 
 class FeedScreen extends StatefulWidget {
-  const FeedScreen({super.key});
+  final int selectedGenre;
+  
+  const FeedScreen({
+    super.key,
+    required this.selectedGenre,
+  });
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();
@@ -34,6 +39,9 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   void initState() {
     super.initState();
+    // Debug print to verify selected genre
+    print('Initial selected genre: ${widget.selectedGenre}');
+    
     _pageController = PageController(
       initialPage: 0,
       viewportFraction: 1.0,
@@ -58,6 +66,28 @@ class _FeedScreenState extends State<FeedScreen> {
     _pageController.dispose();
     super.dispose();
   }
+
+  @override
+  void didUpdateWidget(FeedScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedGenre != widget.selectedGenre) {
+      print('📱 Genre changed to: ${_getGenreName(widget.selectedGenre)}');
+      // Reset page controller and clear videos before loading new ones
+      _pageController.jumpTo(0);
+      setState(() => _videos = []);
+      _loadVideos(); // Reload videos when genre changes
+    }
+  }
+
+  String _getGenreName(int genre) {
+    switch (genre) {
+      case 1: return 'For You';
+      case 2: return 'Acoustic';
+      case 3: return 'Fingerstyle';
+      case 4: return 'Electric';
+      default: return 'Unknown';
+    }
+  }
   
   // Load initial videos
   Future<void> _loadVideos() async {
@@ -70,18 +100,40 @@ class _FeedScreenState extends State<FeedScreen> {
     try {
       final videos = await _videoRepository.getVideoFeed();
       
-      // Filter out electric videos if they should be suppressed
+      // First filter by selected genre
+      var genreFilteredVideos = videos;
+      
+      // Apply genre filtering (1 = For You, 2 = Acoustic, 3 = Fingerstyle, 4 = Electric)
+      switch (widget.selectedGenre) {
+        case 2: // Acoustic
+          genreFilteredVideos = videos.where((video) => video.tags.contains('acoustic')).toList();
+          print('🎸 Filtered for acoustic videos: ${genreFilteredVideos.length}');
+          break;
+        case 3: // Fingerstyle
+          genreFilteredVideos = videos.where((video) => video.tags.contains('fingerstyle')).toList();
+          print('🎸 Filtered for fingerstyle videos: ${genreFilteredVideos.length}');
+          break;
+        case 4: // Electric
+          genreFilteredVideos = videos.where((video) => video.tags.contains('electric')).toList();
+          print('🎸 Filtered for electric videos: ${genreFilteredVideos.length}');
+          break;
+        case 1: // For You - no filtering needed
+        default:
+          print('🎸 Showing all videos: ${genreFilteredVideos.length}');
+          break;
+      }
+      
+      // Then apply electric suppression if needed
       final filteredVideos = _electricSequence.suppressElectric
-          ? videos.where((video) => !video.tags.contains('electric')).toList()
-          : videos;
+          ? genreFilteredVideos.where((video) => !video.tags.contains('electric')).toList()
+          : genreFilteredVideos;
           
-      print('🎸 Loaded ${filteredVideos.length} videos (suppressing electric: ${_electricSequence.suppressElectric})');
+      print('🎸 Final video count after all filtering: ${filteredVideos.length}');
       
       setState(() {
         _videos = filteredVideos;
       });
       
-      // Remove initial tracking - will be handled by _VideoItem
     } catch (e) {
       print('Error loading videos: $e');
     } finally {
