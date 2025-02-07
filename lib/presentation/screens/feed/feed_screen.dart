@@ -354,7 +354,7 @@ class _VideoItemState extends State<_VideoItem> {
           // Action buttons (right side)
           Positioned(
             right: 8,
-            bottom: 80, // Moved 25 pixels lower (was 80)
+            bottom: 0,
             child: VideoActionButtons(
               video: widget.video,
               controller: _controller,

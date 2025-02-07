@@ -36,6 +36,9 @@ class _VideoActionButtonsState extends State<VideoActionButtons> {
   // Add comment count
   int _commentCount = 0;
   
+  // Add speed state
+  double _currentSpeed = 1.0;
+  
   // Get current user ID
   String? get _currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
@@ -93,6 +96,31 @@ class _VideoActionButtonsState extends State<VideoActionButtons> {
         },
       ),
     );
+  }
+
+  // Add method to handle speed changes
+  Future<void> _changeSpeed(double speed) async {
+    if (widget.controller == null) return;
+    
+    try {
+      await widget.controller!.setPlaybackSpeed(speed);
+      setState(() {
+        _currentSpeed = speed;
+      });
+      
+      // Show feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Playback speed: ${speed}x'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      print('Error changing speed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error changing playback speed')),
+      );
+    }
   }
 
   @override
@@ -223,7 +251,7 @@ class _VideoActionButtonsState extends State<VideoActionButtons> {
           _ActionButton(
             icon: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30), // Makes the shadow area circular
+                borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.blue.shade200.withOpacity(0.15),
@@ -259,7 +287,61 @@ class _VideoActionButtonsState extends State<VideoActionButtons> {
               );
             },
           ),
-          const SizedBox(height: 20), // Spacing from bottom
+          const SizedBox(height: 8), // Reduced spacing before speed control
+          // Speed Control Button
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: _ActionButton(
+              icon: Icon(
+                Icons.speed,
+                color: Colors.white.withOpacity(0.8),
+                size: 20,
+              ),
+              label: _currentSpeed == 1.0 ? '1x' : '${_currentSpeed}x',
+              onTap: () {
+                final RenderBox button = context.findRenderObject() as RenderBox;
+                final Offset position = button.localToGlobal(Offset.zero);
+                
+                showMenu(
+                  context: context,
+                  position: RelativeRect.fromLTRB(
+                    position.dx - 10,
+                    position.dy - -5,
+                    position.dx,
+                    position.dy,
+                  ),
+                  color: Colors.black.withOpacity(0.9),
+                  items: [
+                    PopupMenuItem(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      child: Text('1x', style: TextStyle(color: Colors.white)),
+                      value: 1.0,
+                    ),
+                    PopupMenuItem(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      child: Text('0.75x', style: TextStyle(color: Colors.white)),
+                      value: 0.75,
+                    ),
+                    PopupMenuItem(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      child: Text('0.5x', style: TextStyle(color: Colors.white)),
+                      value: 0.5,
+                    ),
+                    PopupMenuItem(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      child: Text('0.25x', style: TextStyle(color: Colors.white)),
+                      value: 0.25,
+                    ),
+                  ],
+                ).then((value) {
+                  if (value != null) {
+                    _changeSpeed(value);
+                  }
+                });
+              },
+            ),
+          ),
+          const SizedBox(height: 12), // Spacing from bottom
         ],
       ),
     );
