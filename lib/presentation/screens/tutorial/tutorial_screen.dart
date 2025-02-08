@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 // Web-specific imports
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
-import 'dart:ui' as ui;
+import 'dart:ui_web' as ui_web;
 
 class TutorialScreen extends StatelessWidget {
   final Video video;
@@ -137,12 +137,11 @@ class _TutorialCard extends StatelessWidget {
   });
 
   Widget _buildWebImage(String url) {
-    // Register the view factory with the new API
     final String viewId = 'tutorial-thumbnail-${url.hashCode}';
     
     if (kIsWeb) {
       // ignore: undefined_prefixed_name
-      ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+      ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
         final img = html.ImageElement()
           ..src = url
           ..style.objectFit = 'cover'
