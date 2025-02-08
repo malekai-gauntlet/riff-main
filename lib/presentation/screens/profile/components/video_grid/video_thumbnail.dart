@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 // Web-specific imports
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
+import 'dart:ui' as ui;
 
 class VideoThumbnail extends StatelessWidget {
   // Properties for the video thumbnail
@@ -106,16 +106,17 @@ class VideoThumbnail extends StatelessWidget {
   Widget _buildWebImage(String url) {
     final String viewId = 'thumbnail-${url.hashCode}';
     
+    // Register the factory
     if (kIsWeb) {
       // ignore: undefined_prefixed_name
-      ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+      ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
         final img = html.ImageElement()
           ..src = url
           ..style.objectFit = 'cover'
           ..style.width = '100%'
           ..style.height = '100%'
-          ..style.cursor = 'pointer'
-          ..onClick.listen((_) => onTap());
+          ..style.cursor = 'pointer' // Make it look clickable
+          ..onClick.listen((_) => onTap()); // Add click handler
 
         return img;
       });

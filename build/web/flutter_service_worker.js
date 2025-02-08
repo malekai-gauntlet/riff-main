@@ -3,7 +3,11 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
+<<<<<<< HEAD
 const RESOURCES = {"flutter_bootstrap.js": "9bf6fc56582cfee2c6460114a3f02c46",
+=======
+const RESOURCES = {"flutter_bootstrap.js": "f8ec169e7f59451193bae1151d90c935",
+>>>>>>> 2a6a9da (fix: web platform registry for video thumbnails and tutorial images)
 "version.json": "6a0d56fd938c1475bdf8b57f5f3ae313",
 "index.html": "e05a1dcaf5a00444ae47bace7ce87725",
 "/": "e05a1dcaf5a00444ae47bace7ce87725",
