@@ -140,15 +140,17 @@ class _TutorialCard extends StatelessWidget {
     // Register the view factory with the new API
     final String viewId = 'tutorial-thumbnail-${url.hashCode}';
     
-    // Register the factory
-    ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
-      final img = html.ImageElement()
-        ..src = url
-        ..style.objectFit = 'cover'
-        ..style.width = '100%'
-        ..style.height = '100%';
-      return img;
-    });
+    if (kIsWeb) {
+      // ignore: undefined_prefixed_name
+      ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+        final img = html.ImageElement()
+          ..src = url
+          ..style.objectFit = 'cover'
+          ..style.width = '100%'
+          ..style.height = '100%';
+        return img;
+      });
+    }
 
     return HtmlElementView(
       viewType: viewId,

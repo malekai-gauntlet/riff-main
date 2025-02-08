@@ -55,18 +55,14 @@ ios/XCBuildData/
 ios/Pods/
 
 # Build files
-build/
+# build/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 
-# Web-specific files
-web/
-
-# Dart/Flutter defaults:
 
 # Build outputs
-build/
+# build/
 ios/Flutter/Flutter.framework
 ios/Flutter/Flutter.podspec
 ios/.symlinks/

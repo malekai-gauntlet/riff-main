@@ -108,17 +108,20 @@ class VideoThumbnail extends StatelessWidget {
     final String viewId = 'thumbnail-${url.hashCode}';
     
     // Register the factory
-    ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
-      final img = html.ImageElement()
-        ..src = url
-        ..style.objectFit = 'cover'
-        ..style.width = '100%'
-        ..style.height = '100%'
-        ..style.cursor = 'pointer' // Make it look clickable
-        ..onClick.listen((_) => onTap()); // Add click handler
+    if (kIsWeb) {
+      // ignore: undefined_prefixed_name
+      ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+        final img = html.ImageElement()
+          ..src = url
+          ..style.objectFit = 'cover'
+          ..style.width = '100%'
+          ..style.height = '100%'
+          ..style.cursor = 'pointer' // Make it look clickable
+          ..onClick.listen((_) => onTap()); // Add click handler
 
-      return img;
-    });
+        return img;
+      });
+    }
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
