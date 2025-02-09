@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../domain/video/video_model.dart';
 import '../../../domain/video/video_repository.dart';
 import '../../widgets/video/video_action_buttons.dart';
 import '../../../domain/video/electric_video_sequence.dart';
 import '../../physics/one_page_scroll_physics.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class FeedScreen extends StatefulWidget {
   final int selectedGenre;
@@ -90,9 +93,11 @@ class _FeedScreenState extends State<FeedScreen> {
   void didUpdateWidget(FeedScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedGenre != widget.selectedGenre) {
+      print('\n🔄 Genre Switch:');
       print('📱 Genre changed to: ${_getGenreName(widget.selectedGenre)}');
+      print('🔑 Clearing ${_videoKeys.length} keys');
+      print('🎮 Active controllers before clear: $_activeControllers');
       _pageController.jumpTo(0);
-      // Clear keys when changing genres
       _videoKeys.clear();
       setState(() => _videos = []);
       _loadVideos();
@@ -145,17 +150,28 @@ class _FeedScreenState extends State<FeedScreen> {
   // Handle page changes and electric video sequence
   void _handlePageChange(int index) async {
     print('\n📱 Feed Status:');
-    print('Loading video: ${_videos[index].id}');
+    print('📍 Page changed to index: $index');
+    print('🎥 Current video ID: ${_videos[index].id}');
+    print('🔑 Active keys count: ${_videoKeys.length}');
+    print('🎮 Active controllers: $_activeControllers');
+    print('🗺️ All video keys: ${_videoKeys.keys.join(", ")}');
     
     // First, dispose all existing controllers
     for (int i = 0; i < _videos.length; i++) {
       final key = _getVideoItemKey(i);
-      key?.currentState?.disposeController();
+      print('🗑️ Attempting to dispose controller for video ${_videos[i].id}');
+      if (key.currentState?.isInitialized ?? false) {
+        print('✅ Found initialized controller for video ${_videos[i].id}');
+      } else {
+        print('❌ No initialized controller for video ${_videos[i].id}');
+      }
+      key.currentState?.disposeController();
     }
     
     // Then update current page
     setState(() {
       _currentPage = index;
+      print('📍 Updated current page to: $index');
     });
 
     // Handle electric sequence
@@ -165,6 +181,7 @@ class _FeedScreenState extends State<FeedScreen> {
       if (nextElectricVideo != null) {
         setState(() {
           _videos.insert(index + 1, Video.fromFirestore(nextElectricVideo));
+          print('🎸 Inserted electric video at index ${index + 1}');
         });
       }
     }
@@ -173,11 +190,17 @@ class _FeedScreenState extends State<FeedScreen> {
   // Get GlobalKey for video item
   GlobalKey<_VideoItemState> _getVideoItemKey(int index) {
     if (index < 0 || index >= _videos.length) {
+      print('❌ Invalid index requested: $index (videos length: ${_videos.length})');
       throw Exception('Invalid video index');
     }
     final videoId = _videos[index].id;
+    final existingKey = _videoKeys[videoId];
+    if (existingKey != null) {
+      print('🔑 Reusing existing key for video: $videoId');
+      print('🎮 Controller status: ${existingKey.currentState?.isInitialized}');
+    }
     return _videoKeys.putIfAbsent(videoId, () {
-      print('🔑 Creating new key for video: $videoId');
+      print('🆕 Creating new key for video: $videoId');
       return GlobalKey<_VideoItemState>();
     });
   }
@@ -284,11 +307,34 @@ class _VideoItemState extends State<_VideoItem> {
   // Add public getter
   bool get isInitialized => _isInitialized;
 
+  // Add connectivity checker
+  Future<String> _getConnectionType() async {
+    if (kIsWeb) return 'Web';
+    try {
+      final connectivity = await Connectivity().checkConnectivity();
+      switch (connectivity) {
+        case ConnectivityResult.mobile:
+          return '4G/5G';
+        case ConnectivityResult.wifi:
+          return 'WiFi';
+        default:
+          return 'Unknown';
+      }
+    } catch (e) {
+      return 'Unknown';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    print('\n🎥 VideoItem initState:');
+    print('📺 Video ID: ${widget.video.id}');
+    print('👁️ Is in active window: ${widget.isInActiveWindow}');
+    print('🎮 Has controller: ${_controller != null}');
+    
     if (widget.isInActiveWindow) {
-      print('🎥 Initializing video: ${widget.video.id}');
+      print('🎬 Starting initialization in initState');
       _initializeVideo();
     }
     
@@ -300,6 +346,12 @@ class _VideoItemState extends State<_VideoItem> {
   @override
   void didUpdateWidget(_VideoItem oldWidget) {
     super.didUpdateWidget(oldWidget);
+    
+    print('\n🔄 Widget Update:');
+    print('📺 Video ID: ${widget.video.id}');
+    print('👁️ Previous active: ${oldWidget.isInActiveWindow}');
+    print('👁️ Current active: ${widget.isInActiveWindow}');
+    print('🎮 Has controller: ${_controller != null}');
     
     if (oldWidget.isInActiveWindow != widget.isInActiveWindow) {
       if (!widget.isInActiveWindow) {
@@ -321,11 +373,18 @@ class _VideoItemState extends State<_VideoItem> {
   }
 
   void disposeController() {
+    print('\n🗑️ Resource Cleanup:');
+    print('📺 Video ID: ${widget.video.id}');
+    print('🎮 Controller exists: ${_controller != null}');
+    print('✨ Is initialized: $_isInitialized');
+    print('📱 Platform: ${_getPlatformType()}');
+    
     if (_isInitialized && _controller != null) {
-      print('🗑️ Disposing video: ${widget.video.id}');
+      print('🚮 Starting controller disposal...');
       _controller!.dispose();
       _isInitialized = false;
       _controller = null;
+      print('✅ Controller disposed successfully');
     }
   }
 
@@ -336,19 +395,44 @@ class _VideoItemState extends State<_VideoItem> {
   }
 
   Future<void> _initializeVideo() async {
+    print('\n📱 Device Info:');
+    print('📱 Platform: ${_getPlatformType()}');
+    print('🌐 Network Info:');
+    print('📡 Connection type: ${await _getConnectionType()}');
+    print('🔗 Video URL: ${widget.video.url}');
+    
+    print('\n🎬 Starting video initialization:');
+    print('📺 Video ID: ${widget.video.id}');
+    print('🌟 Widget mounted: $mounted');
+    
     try {
+      print('⚡ Creating controller...');
       _controller = VideoPlayerController.network(widget.video.url);
+      
+      print('🔄 Initializing controller...');
       await _controller?.initialize();
+      print('✅ Controller initialized');
+      
       await _controller?.setLooping(true);
+      print('🔁 Looping enabled');
       
       if (mounted) {
+        print('🎯 Widget still mounted, updating state');
         setState(() => _isInitialized = true);
         if (widget.isVisible && _controller != null) {
+          print('▶️ Auto-playing video');
           await _controller!.play();
         }
+      } else {
+        print('❌ Widget not mounted after initialization');
       }
-    } catch (e) {
-      print('❌ Error loading video: ${widget.video.id}');
+    } catch (e, stackTrace) {
+      print('\n💥 Error Details:');
+      print('❌ Error type: ${e.runtimeType}');
+      print('🚨 Error message: $e');
+      print('📱 Platform: ${_getPlatformType()}');
+      print('🌐 Network: ${await _getConnectionType()}');
+      print('📍 Stack trace: $stackTrace');
     }
   }
 
@@ -449,5 +533,17 @@ class _VideoItemState extends State<_VideoItem> {
         ],
       ),
     );
+  }
+}
+
+// Add this utility function at the top level, before the FeedScreen class
+String _getPlatformType() {
+  if (kIsWeb) return 'Web';
+  try {
+    if (Platform.isAndroid) return 'Android';
+    if (Platform.isIOS) return 'iOS';
+    return 'Unknown';
+  } catch (e) {
+    return 'Web';
   }
 } 
