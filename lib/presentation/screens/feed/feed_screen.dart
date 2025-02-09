@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
+import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../domain/video/video_model.dart';
 import '../../../domain/video/video_repository.dart';
@@ -352,6 +353,12 @@ class _VideoItemState extends State<_VideoItem> {
     print('👁️ Previous active: ${oldWidget.isInActiveWindow}');
     print('👁️ Current active: ${widget.isInActiveWindow}');
     print('🎮 Has controller: ${_controller != null}');
+    if (_controller != null) {
+      print('📊 Controller state:');
+      print('   - Initialized: ${_controller?.value.isInitialized}');
+      print('   - Playing: ${_controller?.value.isPlaying}');
+      print('   - Position: ${_controller?.value.position}');
+    }
     
     if (oldWidget.isInActiveWindow != widget.isInActiveWindow) {
       if (!widget.isInActiveWindow) {
@@ -395,6 +402,7 @@ class _VideoItemState extends State<_VideoItem> {
   }
 
   Future<void> _initializeVideo() async {
+    final startTime = DateTime.now();
     print('\n📱 Device Info:');
     print('📱 Platform: ${_getPlatformType()}');
     print('🌐 Network Info:');
@@ -407,14 +415,58 @@ class _VideoItemState extends State<_VideoItem> {
     
     try {
       print('⚡ Creating controller...');
-      _controller = VideoPlayerController.network(widget.video.url);
+      _controller = VideoPlayerController.network(
+        widget.video.url,
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      );
       
+      // Add initialization start timestamp
+      final initStartTime = DateTime.now();
       print('🔄 Initializing controller...');
-      await _controller?.initialize();
+      print('⏰ Init start time: ${initStartTime.toString()}');
+      
+      await _controller?.initialize().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('⚠️ Initialization timeout after 10 seconds');
+          print('📊 Last known controller state:');
+          if (_controller != null) {
+            print('   - Has error: ${_controller!.value.hasError}');
+            print('   - Error description: ${_controller!.value.errorDescription}');
+            print('   - Is buffering: ${_controller!.value.isBuffering}');
+            print('   - Is initialized: ${_controller!.value.isInitialized}');
+          }
+          throw TimeoutException('Video initialization timed out after 10 seconds');
+        },
+      );
+      
+      final loadTime = DateTime.now().difference(startTime);
+      print('\n⏱️ Performance Metrics:');
+      print('   - Total load time: ${loadTime.inMilliseconds}ms');
+      print('   - Init time: ${DateTime.now().difference(initStartTime).inMilliseconds}ms');
+      
+      if (_controller?.value.hasError ?? false) {
+        print('🚨 Controller has error: ${_controller?.value.errorDescription}');
+        throw Exception(_controller?.value.errorDescription);
+      }
+      
       print('✅ Controller initialized');
+      print('📊 Video details:');
+      print('   - Duration: ${_controller?.value.duration.inSeconds}s');
+      print('   - Size: ${_controller?.value.size.width}x${_controller?.value.size.height}');
+      print('   - Buffered: ${_controller?.value.buffered.length} parts');
+      print('   - Is buffering: ${_controller?.value.isBuffering}');
+      print('   - Is playing: ${_controller?.value.isPlaying}');
       
       await _controller?.setLooping(true);
       print('🔁 Looping enabled');
+      
+      // Add listener for buffering state
+      _controller?.addListener(() {
+        if (_controller!.value.isBuffering) {
+          print('📶 Buffering started at position: ${_controller!.value.position}');
+        }
+      });
       
       if (mounted) {
         print('🎯 Widget still mounted, updating state');
@@ -422,6 +474,7 @@ class _VideoItemState extends State<_VideoItem> {
         if (widget.isVisible && _controller != null) {
           print('▶️ Auto-playing video');
           await _controller!.play();
+          print('✅ Playback started');
         }
       } else {
         print('❌ Widget not mounted after initialization');
@@ -432,6 +485,15 @@ class _VideoItemState extends State<_VideoItem> {
       print('🚨 Error message: $e');
       print('📱 Platform: ${_getPlatformType()}');
       print('🌐 Network: ${await _getConnectionType()}');
+      if (_controller != null) {
+        print('🎮 Controller state at error:');
+        print('   - Initialized: ${_controller?.value.isInitialized}');
+        print('   - Playing: ${_controller?.value.isPlaying}');
+        print('   - Has error: ${_controller?.value.hasError}');
+        print('   - Is buffering: ${_controller?.value.isBuffering}');
+        print('   - Error description: ${_controller?.value.errorDescription}');
+        print('   - Position: ${_controller?.value.position}');
+      }
       print('📍 Stack trace: $stackTrace');
     }
   }
