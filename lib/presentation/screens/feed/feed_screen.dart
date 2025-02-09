@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
 import 'dart:async';
+// Remove incorrect html import and add conditional dart:html import
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' if (dart.library.io) 'dart:io' as html;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../domain/video/video_model.dart';
 import '../../../domain/video/video_repository.dart';
@@ -310,7 +313,27 @@ class _VideoItemState extends State<_VideoItem> {
 
   // Add connectivity checker
   Future<String> _getConnectionType() async {
-    if (kIsWeb) return 'Web';
+    if (kIsWeb) {
+      try {
+        print('📡 Checking PWA status...');
+        // Safely check PWA status using display-mode media query
+        if (html.window != null) {
+          try {
+            // Check if running in standalone mode (PWA)
+            final displayMode = html.window.matchMedia('(display-mode: standalone)').matches ||
+                              html.window.matchMedia('(display-mode: fullscreen)').matches ||
+                              html.window.matchMedia('(display-mode: minimal-ui)').matches;
+            return displayMode ? 'PWA (Standalone)' : 'PWA (Browser)';
+          } catch (e) {
+            print('📱 Display mode check error: $e');
+          }
+        }
+      } catch (e) {
+        print('📱 PWA detection error: $e');
+      }
+      return 'PWA (Web)';
+    }
+    
     try {
       final connectivity = await Connectivity().checkConnectivity();
       switch (connectivity) {
@@ -403,11 +426,28 @@ class _VideoItemState extends State<_VideoItem> {
 
   Future<void> _initializeVideo() async {
     final startTime = DateTime.now();
+    final connectionType = await _getConnectionType();
+    
     print('\n📱 Device Info:');
     print('📱 Platform: ${_getPlatformType()}');
     print('🌐 Network Info:');
-    print('📡 Connection type: ${await _getConnectionType()}');
+    print('📡 Connection type: $connectionType');
     print('🔗 Video URL: ${widget.video.url}');
+    
+    // Add memory usage logging for PWA
+    if (kIsWeb) {
+      try {
+        if (html.window != null) {
+          final performance = html.window.performance;
+          if (performance != null) {
+            print('📊 Memory Info:');
+            print('   - Memory info not available in PWA');
+          }
+        }
+      } catch (e) {
+        print('📊 Unable to get memory info: $e');
+      }
+    }
     
     print('\n🎬 Starting video initialization:');
     print('📺 Video ID: ${widget.video.id}');
@@ -424,6 +464,17 @@ class _VideoItemState extends State<_VideoItem> {
       final initStartTime = DateTime.now();
       print('🔄 Initializing controller...');
       print('⏰ Init start time: ${initStartTime.toString()}');
+      
+      // Add timeout warning
+      bool hasTimedOut = false;
+      Timer(const Duration(seconds: 8), () {
+        if (!_isInitialized && mounted) {
+          hasTimedOut = true;
+          print('⚠️ Warning: Initialization taking longer than 8 seconds');
+          print('📡 Network type: $connectionType');
+          print('🎥 Video size: ${_controller?.value.size ?? "unknown"}');
+        }
+      });
       
       await _controller?.initialize().timeout(
         const Duration(seconds: 10),
@@ -447,6 +498,7 @@ class _VideoItemState extends State<_VideoItem> {
       
       if (_controller?.value.hasError ?? false) {
         print('🚨 Controller has error: ${_controller?.value.errorDescription}');
+        print('📡 Network type at error: $connectionType');
         throw Exception(_controller?.value.errorDescription);
       }
       
@@ -468,6 +520,20 @@ class _VideoItemState extends State<_VideoItem> {
         }
       });
       
+      // Add PWA-specific playback monitoring
+      _controller?.addListener(() {
+        final value = _controller!.value;
+        if (value.isBuffering) {
+          print('\n📶 Buffering Status (PWA):');
+          print('   - Position: ${value.position}');
+          print('   - Network: $connectionType');
+          print('   - Buffered parts: ${value.buffered.length}');
+          for (final range in value.buffered) {
+            print('   - Range: ${range.toString()}');
+          }
+        }
+      });
+      
       if (mounted) {
         print('🎯 Widget still mounted, updating state');
         setState(() => _isInitialized = true);
@@ -480,11 +546,12 @@ class _VideoItemState extends State<_VideoItem> {
         print('❌ Widget not mounted after initialization');
       }
     } catch (e, stackTrace) {
-      print('\n💥 Error Details:');
+      print('\n💥 Error Details (PWA):');
       print('❌ Error type: ${e.runtimeType}');
       print('🚨 Error message: $e');
       print('📱 Platform: ${_getPlatformType()}');
-      print('🌐 Network: ${await _getConnectionType()}');
+      print('🌐 Network: $connectionType');
+      print('⏱️ Time since start: ${DateTime.now().difference(startTime).inMilliseconds}ms');
       if (_controller != null) {
         print('🎮 Controller state at error:');
         print('   - Initialized: ${_controller?.value.isInitialized}');
