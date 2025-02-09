@@ -551,15 +551,7 @@ class _VideoItemState extends State<_VideoItem> {
         if (mounted) {
           setState(() => _isInitialized = true);
           if (widget.isVisible && _controller != null) {
-            print('▶️ Starting playback...');
-            await _controller!.play();
-            // Verify playback actually started
-            if (_controller!.value.isPlaying) {
-              print('✅ Playback confirmed started');
-            } else {
-              print('⚠️ Playback may not have started properly');
-              _retryPlayback();
-            }
+            print('✅ Video ready for playback - tap to play');
           }
         }
       } catch (initError) {
@@ -635,14 +627,20 @@ class _VideoItemState extends State<_VideoItem> {
               ),
             ),
             
-          // Play/Pause indicator overlay
+          // Play/Pause indicator overlay - Always show until first play
           if (widget.isVisible && _isInitialized && _controller != null)
             AnimatedOpacity(
-              opacity: _controller!.value.isPlaying ? 0.0 : 1.0,
+              opacity: !_controller!.value.isPlaying ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 200),
               child: Container(
-                color: Colors.black.withOpacity(0.2),
-                child: const Center(),
+                color: Colors.black.withOpacity(0.3),
+                child: Center(
+                  child: Icon(
+                    _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                    size: 64,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
               ),
             ),
             
