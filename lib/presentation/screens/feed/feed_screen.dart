@@ -140,23 +140,19 @@ class _FeedScreenState extends State<FeedScreen> {
     print('\n📱 Feed Status:');
     print('Loading video: ${_videos[index].id}');
     
-    // Dispose previous and next video controllers immediately
-    if (index > 0) {
-      final prevWidget = _getVideoItemKey(index - 1)?.currentState;
-      if (prevWidget != null) {
-        prevWidget.disposeController();
-      }
+    // First, dispose all existing controllers
+    for (int i = 0; i < _videos.length; i++) {
+      final key = _getVideoItemKey(i);
+      key?.currentState?.disposeController();
     }
-    if (index < _videos.length - 1) {
-      final nextWidget = _getVideoItemKey(index + 1)?.currentState;
-      if (nextWidget != null) {
-        nextWidget.disposeController();
-      }
-    }
+    
+    // Then update current page
+    setState(() {
+      _currentPage = index;
+    });
 
+    // Handle electric sequence
     await _electricSequence.stopWatching();
-    setState(() => _currentPage = index);
-
     if (_electricSequence.shouldShowElectricNext()) {
       final nextElectricVideo = await _electricSequence.getNextElectricVideo();
       if (nextElectricVideo != null) {
@@ -202,8 +198,8 @@ class _FeedScreenState extends State<FeedScreen> {
                       _electricSequence.startWatching(video.id);
                     }
                   },
-                  shouldPreload: false, // Disable preloading
-                  isInActiveWindow: index == _currentPage, // Only current video is active
+                  shouldPreload: false,
+                  isInActiveWindow: index == _currentPage, // Only current video active
                 );
               },
             ),
@@ -271,6 +267,9 @@ class _VideoItemState extends State<_VideoItem> {
   // Change from late to nullable
   VideoPlayerController? _controller;
   bool _isInitialized = false;
+  
+  // Add public getter
+  bool get isInitialized => _isInitialized;
 
   @override
   void initState() {
