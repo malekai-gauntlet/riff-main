@@ -39,6 +39,7 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   void initState() {
     super.initState();
+    print('🔥 HOT RELOAD TEST - App running on phone and web!');
     // Debug print to verify selected genre
     print('Initial selected genre: ${widget.selectedGenre}');
     
@@ -230,6 +231,7 @@ class _FeedScreenState extends State<FeedScreen> {
                       _electricSequence.startWatching(video.id);
                     }
                   },
+                  shouldPreload: index == _currentPage + 1,
                 );
               },
             ),
@@ -242,11 +244,13 @@ class _VideoItem extends StatefulWidget {
   final Video video;
   final bool isVisible;
   final Function(bool isVisible) onVisibilityChanged;
+  final bool shouldPreload;
 
   const _VideoItem({
     required this.video,
     required this.isVisible,
     required this.onVisibilityChanged,
+    this.shouldPreload = false,
   });
 
   @override
@@ -260,8 +264,8 @@ class _VideoItemState extends State<_VideoItem> {
   @override
   void initState() {
     super.initState();
+    print('🎥 Initializing video: ${widget.video.id} (preload: ${widget.shouldPreload})');
     _initializeVideo();
-    // Start tracking if this is the first visible video
     if (widget.isVisible) {
       widget.onVisibilityChanged(true);
     }
@@ -281,19 +285,41 @@ class _VideoItemState extends State<_VideoItem> {
   }
 
   Future<void> _initializeVideo() async {
-    _controller = VideoPlayerController.network(widget.video.url);
+    print('🎥 Starting initialization for video: ${widget.video.id}');
+    print('📱 Video URL: ${widget.video.url}');
     
     try {
+      print('🎥 Creating VideoPlayerController...');
+      _controller = VideoPlayerController.network(widget.video.url);
+      
+      print('🎥 Calling initialize()...');
       await _controller.initialize();
+      print('✅ Initialize completed. Video size: ${_controller.value.size}');
+      
+      print('🔄 Setting video to loop...');
       await _controller.setLooping(true);
-      await _controller.play();
+      print('✅ Loop setting applied');
+      
+      if (widget.isVisible) {
+        print('▶️ Video is visible, starting playback...');
+        await _controller.play();
+        print('✅ Playback started');
+      }
+      
       if (mounted) {
         setState(() {
           _isInitialized = true;
+          print('✅ State updated, initialization complete for: ${widget.video.id}');
         });
       }
-    } catch (e) {
-      print('Error initializing video: $e');
+    } catch (e, stackTrace) {
+      print('❌ Error initializing video: $e');
+      print('📍 Error location: ${stackTrace.toString().split('\n')[0]}');
+      print('🔍 Video details:');
+      print('   - ID: ${widget.video.id}');
+      print('   - URL: ${widget.video.url}');
+      print('   - Is Visible: ${widget.isVisible}');
+      print('   - Should Preload: ${widget.shouldPreload}');
     }
   }
 
