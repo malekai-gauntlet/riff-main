@@ -300,17 +300,18 @@ class _VideoItemState extends State<_VideoItem> {
       await _controller.setLooping(true);
       print('✅ Loop setting applied');
       
-      if (widget.isVisible) {
-        print('▶️ Video is visible, starting playback...');
-        await _controller.play();
-        print('✅ Playback started');
-      }
-      
       if (mounted) {
         setState(() {
           _isInitialized = true;
           print('✅ State updated, initialization complete for: ${widget.video.id}');
         });
+        
+        // Only attempt to play after initialization and state update
+        if (widget.isVisible) {
+          print('▶️ Video is visible and initialized, starting playback...');
+          await _controller.play();
+          print('✅ Playback started successfully');
+        }
       }
     } catch (e, stackTrace) {
       print('❌ Error initializing video: $e');
