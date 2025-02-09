@@ -39,23 +39,15 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   void initState() {
     super.initState();
-    print('🔥 HOT RELOAD TEST - App running on phone and web!');
-    // Debug print to verify selected genre
-    print('Initial selected genre: ${widget.selectedGenre}');
-    
     _pageController = PageController(
       initialPage: 0,
       viewportFraction: 1.0,
       keepPage: true,
     );
-    // Set up callback for when electric suppression changes
     _electricSequence.onSuppressStateChanged = () {
-      print('🔄 Filtering out electric videos from current feed');
       setState(() {
-        // Filter existing videos without reloading
         if (_electricSequence.suppressElectric) {
           _videos = _videos.where((video) => !video.tags.contains('electric')).toList();
-          print('🎸 Removed electric videos. ${_videos.length} videos remaining');
         }
       });
     };
@@ -93,88 +85,69 @@ class _FeedScreenState extends State<FeedScreen> {
   // Load initial videos
   Future<void> _loadVideos() async {
     if (_isLoading) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
     
     try {
       final videos = await _videoRepository.getVideoFeed();
-      
-      // First filter by selected genre
       var genreFilteredVideos = videos;
       
-      // Apply genre filtering (1 = For You, 2 = Acoustic, 3 = Fingerstyle, 4 = Electric)
       switch (widget.selectedGenre) {
-        case 2: // Acoustic
+        case 2:
           genreFilteredVideos = videos.where((video) => video.tags.contains('acoustic')).toList();
-          print('🎸 Filtered for acoustic videos: ${genreFilteredVideos.length}');
           break;
-        case 3: // Fingerstyle
+        case 3:
           genreFilteredVideos = videos.where((video) => video.tags.contains('fingerstyle')).toList();
-          print('🎸 Filtered for fingerstyle videos: ${genreFilteredVideos.length}');
           break;
-        case 4: // Electric
+        case 4:
           genreFilteredVideos = videos.where((video) => video.tags.contains('electric')).toList();
-          print('🎸 Filtered for electric videos: ${genreFilteredVideos.length}');
-          break;
-        case 1: // For You - no filtering needed
-        default:
-          print('🎸 Showing all videos: ${genreFilteredVideos.length}');
           break;
       }
       
-      // Then apply electric suppression if needed
       final filteredVideos = _electricSequence.suppressElectric
           ? genreFilteredVideos.where((video) => !video.tags.contains('electric')).toList()
           : genreFilteredVideos;
-          
-      print('🎸 Final video count after all filtering: ${filteredVideos.length}');
       
-      setState(() {
-        _videos = filteredVideos;
-      });
-      
+      setState(() => _videos = filteredVideos);
     } catch (e) {
-      print('Error loading videos: $e');
+      print('❌ Error loading videos: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
   // Handle page changes and electric video sequence
   void _handlePageChange(int index) async {
-    print('📱 PAGE CHANGE: Moving to index $index');
-    print('🔄 Current video count in memory: ${_videos.length}');
-    
-    // Stop tracking previous video
+    print('\n🎯 Active Window Status:');
+    if (index > 0) {
+      print('   Previous [$index-1]: ${_videos[index - 1].id} (Active)');
+    }
+    print('   Current  [$index]: ${_videos[index].id} (Active)');
+    if (index < _videos.length - 1) {
+      print('   Next    [$index+1]: ${_videos[index + 1].id} (Active)');
+    }
+    if (index < _videos.length - 2) {
+      print('   Future  [$index+2]: ${_videos[index + 2].id} (Inactive)');
+    }
+    print('🎮 Total videos in memory: ${_videos.length}');
+
     await _electricSequence.stopWatching();
-    
     setState(() {
       _currentPage = index;
+      
+      // Keep only necessary videos in memory (window of 5: 2 before, current, 2 after)
+      if (_videos.length > 5) {
+        int startKeep = (index - 2).clamp(0, _videos.length);
+        int endKeep = (index + 3).clamp(0, _videos.length);
+        _videos = _videos.sublist(startKeep, endKeep);
+        print('📦 Trimmed videos list to: ${_videos.length} videos');
+      }
     });
 
-    // Log the transition
-    if (index > 0) {
-      print('📊 Previous video: ${_videos[index - 1].id}');
-    }
-    print('📊 Current video: ${_videos[index].id}');
-    if (index < _videos.length - 1) {
-      print('📊 Next video: ${_videos[index + 1].id}');
-    }
-
-    // Check if we should show an electric video
     if (_electricSequence.shouldShowElectricNext()) {
       final nextElectricVideo = await _electricSequence.getNextElectricVideo();
       if (nextElectricVideo != null) {
-        // Convert Firestore document to Video model
-        final video = Video.fromFirestore(nextElectricVideo);
-        
-        // Insert the electric video as the next video
         setState(() {
-          _videos.insert(index + 1, video);
+          _videos.insert(index + 1, Video.fromFirestore(nextElectricVideo));
         });
       }
     }
@@ -244,6 +217,7 @@ class _FeedScreenState extends State<FeedScreen> {
                     }
                   },
                   shouldPreload: index == _currentPage + 1,
+                  isInActiveWindow: (index >= _currentPage - 1 && index <= _currentPage + 1), // In 3-video window
                 );
               },
             ),
@@ -257,12 +231,14 @@ class _VideoItem extends StatefulWidget {
   final bool isVisible;
   final Function(bool isVisible) onVisibilityChanged;
   final bool shouldPreload;
+  final bool isInActiveWindow;
 
   const _VideoItem({
     required this.video,
     required this.isVisible,
     required this.onVisibilityChanged,
     this.shouldPreload = false,
+    this.isInActiveWindow = false,
   });
 
   @override
@@ -277,11 +253,11 @@ class _VideoItemState extends State<_VideoItem> {
   @override
   void initState() {
     super.initState();
-    print('🎥 [Instance: $_instanceId] Creating new video item:');
-    print('   - Video ID: ${widget.video.id}');
-    print('   - Preload: ${widget.shouldPreload}');
-    print('   - Is Visible: ${widget.isVisible}');
-    _initializeVideo();
+    if (widget.isInActiveWindow) {
+      print('🎥 Initializing: ${widget.video.id}');
+      _initializeVideo();
+    }
+    
     if (widget.isVisible) {
       widget.onVisibilityChanged(true);
     }
@@ -290,22 +266,23 @@ class _VideoItemState extends State<_VideoItem> {
   @override
   void didUpdateWidget(_VideoItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    print('🔄 [Instance: $_instanceId] Widget updated:');
-    print('   - Video ID: ${widget.video.id}');
-    print('   - Old visible: ${oldWidget.isVisible} -> New visible: ${widget.isVisible}');
-    print('   - Is Initialized: $_isInitialized');
+    
+    if (oldWidget.isInActiveWindow != widget.isInActiveWindow) {
+      if (!widget.isInActiveWindow && _isInitialized) {
+        print('🗑️ Disposing: ${widget.video.id}');
+        _controller.dispose();
+        _isInitialized = false;
+      } else if (widget.isInActiveWindow && !_isInitialized) {
+        print('🎥 Initializing: ${widget.video.id}');
+        _initializeVideo();
+      }
+    }
     
     if (oldWidget.isVisible != widget.isVisible) {
       widget.onVisibilityChanged(widget.isVisible);
-      if (widget.isVisible) {
-        print('▶️ [Instance: $_instanceId] Attempting to play video');
-        if (_isInitialized) {
-          _controller.play();
-        } else {
-          print('⚠️ [Instance: $_instanceId] Tried to play but not initialized');
-        }
-      } else {
-        print('⏸️ [Instance: $_instanceId] Pausing video');
+      if (widget.isVisible && _isInitialized) {
+        _controller.play();
+      } else if (_isInitialized) {
         _controller.pause();
       }
     }
@@ -313,69 +290,41 @@ class _VideoItemState extends State<_VideoItem> {
 
   @override
   void dispose() {
-    print('🗑️ [Instance: $_instanceId] Disposing video item:');
-    print('   - Video ID: ${widget.video.id}');
-    print('   - Was Initialized: $_isInitialized');
-    _controller.dispose();
+    if (_isInitialized) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _initializeVideo() async {
-    print('🎥 [Instance: $_instanceId] Starting initialization:');
-    print('   - Video ID: ${widget.video.id}');
-    print('   - URL: ${widget.video.url}');
-    
     try {
-      print('🎥 [Instance: $_instanceId] Creating controller...');
       _controller = VideoPlayerController.network(widget.video.url);
-      
-      print('🎥 [Instance: $_instanceId] Calling initialize()...');
       await _controller.initialize();
-      print('✅ [Instance: $_instanceId] Initialize completed:');
-      print('   - Video size: ${_controller.value.size}');
-      print('   - Duration: ${_controller.value.duration}');
-      
-      print('🔄 [Instance: $_instanceId] Setting video to loop...');
       await _controller.setLooping(true);
       
       if (mounted) {
-        setState(() {
-          _isInitialized = true;
-          print('✅ [Instance: $_instanceId] State updated, ready to play');
-        });
-        
+        setState(() => _isInitialized = true);
         if (widget.isVisible) {
-          print('▶️ [Instance: $_instanceId] Video is visible, starting playback');
           await _controller.play();
-          print('✅ [Instance: $_instanceId] Playback started');
         }
       }
-    } catch (e, stackTrace) {
-      print('❌ [Instance: $_instanceId] Error initializing video:');
-      print('   - Error: $e');
-      print('   - Location: ${stackTrace.toString().split('\n')[0]}');
-      print('   - Video ID: ${widget.video.id}');
-      print('   - Is Visible: ${widget.isVisible}');
-      print('   - Should Preload: ${widget.shouldPreload}');
+    } catch (e) {
+      print('❌ Failed to initialize: ${widget.video.id}');
     }
   }
 
   void _togglePlayPause() async {
-    print('Tap detected!'); // Debug print
     if (!_isInitialized) return;
 
     try {
       if (_controller.value.isPlaying) {
-        print('Pausing video...'); // Debug print
         await _controller.pause();
       } else {
-        print('Playing video...'); // Debug print
         await _controller.play();
       }
-      // Force rebuild to update UI
       setState(() {});
     } catch (e) {
-      print('Error toggling play/pause: $e');
+      print('❌ Error toggling play/pause: $e');
     }
   }
 

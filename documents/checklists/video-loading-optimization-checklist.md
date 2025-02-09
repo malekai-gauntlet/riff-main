@@ -1,5 +1,58 @@
 # Video Loading Optimization Checklist
 
+## Current Implementation Plan
+
+### Phase 1: Three Active Videos Implementation
+1. **Modify Video Management Structure**
+   - [ ] Update `_VideoItem` to track active window status
+   - [ ] Add window position tracking in `FeedScreen`
+   - [ ] Implement sliding window logic in `PageView.builder`
+
+2. **Controller Lifecycle Management**
+   - [ ] Add immediate disposal for videos outside window
+   - [ ] Implement preloading for next video
+   - [ ] Add proper cleanup in dispose methods
+
+3. **Window Position Tracking**
+   - [ ] Track current, previous, and next indices
+   - [ ] Update window on scroll/page change
+   - [ ] Handle edge cases (first/last video)
+
+4. **Memory Management**
+   - [ ] Verify controller disposal
+   - [ ] Monitor memory usage
+   - [ ] Add debug logging for window movement
+
+5. **Testing Steps**
+   - [ ] Test smooth scrolling
+   - [ ] Verify video loading timing
+   - [ ] Check memory usage
+   - [ ] Test on mobile device
+   - [ ] Test different scroll speeds
+
+### Phase 2: Progressive Loading Enhancement
+1. **Thumbnail System**
+   - [ ] Add thumbnail support to video model
+   - [ ] Implement thumbnail preloading
+   - [ ] Add placeholder UI
+
+2. **Quality Transitions**
+   - [ ] Implement low-quality initial load
+   - [ ] Add smooth transition to high quality
+   - [ ] Handle quality switching logic
+
+3. **Loading States**
+   - [ ] Add loading indicators
+   - [ ] Implement transition animations
+   - [ ] Handle error states
+
+4. **Performance Optimization**
+   - [ ] Optimize thumbnail loading
+   - [ ] Cache quality versions
+   - [ ] Fine-tune transition timing
+
+## Original High Priority Tasks
+
 ## 🎯 HIGH PRIORITY - Core Performance Issues
 
 ### 1. Firebase/Firestore Integration
