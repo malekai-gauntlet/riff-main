@@ -101,9 +101,25 @@ class _FeedScreenState extends State<FeedScreen> {
       print('📱 Genre changed to: ${_getGenreName(widget.selectedGenre)}');
       print('🔑 Clearing ${_videoKeys.length} keys');
       print('🎮 Active controllers before clear: $_activeControllers');
-      _pageController.jumpTo(0);
+      
+      // First dispose all existing controllers
+      _videoKeys.forEach((_, key) {
+        key.currentState?.disposeController();
+      });
+      
+      // Reset page controller
+      _pageController.jumpToPage(0);
+      
+      // Clear keys after disposal
       _videoKeys.clear();
-      setState(() => _videos = []);
+      
+      // Reset videos and trigger reload
+      setState(() {
+        _videos = [];
+        _currentPage = 0;
+      });
+      
+      // Load new videos after state is cleaned
       _loadVideos();
     }
   }
@@ -158,21 +174,35 @@ class _FeedScreenState extends State<FeedScreen> {
     print('🎥 Current video ID: ${_videos[index].id}');
     print('🔑 Active keys count: ${_videoKeys.length}');
     print('🎮 Active controllers: $_activeControllers');
-    print('🗺️ All video keys: ${_videoKeys.keys.join(", ")}');
     
-    // First, dispose all existing controllers
+    // Dispose controllers that are more than 1 page away
     for (int i = 0; i < _videos.length; i++) {
-      final key = _getVideoItemKey(i);
-      print('🗑️ Attempting to dispose controller for video ${_videos[i].id}');
-      if (key.currentState?.isInitialized ?? false) {
-        print('✅ Found initialized controller for video ${_videos[i].id}');
-      } else {
-        print('❌ No initialized controller for video ${_videos[i].id}');
+      if (i != index && (i < index - 1 || i > index + 1)) {
+        final key = _getVideoItemKey(i);
+        if (key.currentState?.isInitialized ?? false) {
+          print('🗑️ Disposing controller for video ${_videos[i].id} (distance: ${(i - index).abs()} pages)');
+          key.currentState?.disposeController();
+        }
       }
-      key.currentState?.disposeController();
     }
     
-    // Then update current page
+    // Ensure the current video is initialized
+    final currentKey = _getVideoItemKey(index);
+    if (!(currentKey.currentState?.isInitialized ?? false)) {
+      print('🎥 Current video not initialized, triggering initialization');
+      currentKey.currentState?._initializeVideo();
+    }
+    
+    // Pre-initialize the next video if it exists
+    if (index + 1 < _videos.length) {
+      final nextKey = _getVideoItemKey(index + 1);
+      if (!(nextKey.currentState?.isInitialized ?? false)) {
+        print('🎥 Pre-initializing next video');
+        nextKey.currentState?._initializeVideo();
+      }
+    }
+    
+    // Update current page
     setState(() {
       _currentPage = index;
       print('📍 Updated current page to: $index');
@@ -434,134 +464,141 @@ class _VideoItemState extends State<_VideoItem> {
     print('📡 Connection type: $connectionType');
     print('🔗 Video URL: ${widget.video.url}');
     
-    // Add memory usage logging for PWA
-    if (kIsWeb) {
-      try {
-        if (html.window != null) {
-          final performance = html.window.performance;
-          if (performance != null) {
-            print('📊 Memory Info:');
-            print('   - Memory info not available in PWA');
-          }
-        }
-      } catch (e) {
-        print('📊 Unable to get memory info: $e');
-      }
+    if (!mounted) {
+      print('❌ Widget not mounted before initialization');
+      return;
     }
-    
-    print('\n🎬 Starting video initialization:');
-    print('📺 Video ID: ${widget.video.id}');
-    print('🌟 Widget mounted: $mounted');
-    
+
     try {
       print('⚡ Creating controller...');
       _controller = VideoPlayerController.network(
         widget.video.url,
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+        ),
       );
       
-      // Add initialization start timestamp
       final initStartTime = DateTime.now();
       print('🔄 Initializing controller...');
       print('⏰ Init start time: ${initStartTime.toString()}');
       
-      // Add timeout warning
-      bool hasTimedOut = false;
-      Timer(const Duration(seconds: 8), () {
-        if (!_isInitialized && mounted) {
-          hasTimedOut = true;
-          print('⚠️ Warning: Initialization taking longer than 8 seconds');
-          print('📡 Network type: $connectionType');
-          print('🎥 Video size: ${_controller?.value.size ?? "unknown"}');
-        }
-      });
+      bool initializationCompleted = false;
       
-      await _controller?.initialize().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          print('⚠️ Initialization timeout after 10 seconds');
-          print('📊 Last known controller state:');
-          if (_controller != null) {
-            print('   - Has error: ${_controller!.value.hasError}');
-            print('   - Error description: ${_controller!.value.errorDescription}');
-            print('   - Is buffering: ${_controller!.value.isBuffering}');
-            print('   - Is initialized: ${_controller!.value.isInitialized}');
+      try {
+        await _controller?.initialize().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            print('⚠️ Initialization timeout after 10 seconds');
+            if (!initializationCompleted && mounted) {
+              print('🧹 Cleaning up timed out controller');
+              disposeController();
+            }
+            throw TimeoutException('Video initialization timed out');
+          },
+        );
+        
+        initializationCompleted = true;
+        
+        if (!mounted) {
+          print('❌ Widget not mounted after initialization');
+          disposeController();
+          return;
+        }
+
+        final loadTime = DateTime.now().difference(startTime);
+        print('\n⏱️ Performance Metrics:');
+        print('   - Total load time: ${loadTime.inMilliseconds}ms');
+        print('   - Init time: ${DateTime.now().difference(initStartTime).inMilliseconds}ms');
+        
+        if (_controller?.value.hasError ?? false) {
+          print('🚨 Controller has error: ${_controller?.value.errorDescription}');
+          print('📡 Network type at error: $connectionType');
+          disposeController();
+          return;
+        }
+        
+        print('✅ Controller initialized successfully');
+        print('📊 Video details:');
+        print('   - Duration: ${_controller?.value.duration.inSeconds}s');
+        print('   - Size: ${_controller?.value.size.width}x${_controller?.value.size.height}');
+        print('   - Buffered: ${_controller?.value.buffered.length} parts');
+        
+        await _controller?.setLooping(true);
+        
+        // Add enhanced error monitoring
+        _controller?.addListener(() {
+          if (!mounted) return;
+          
+          final value = _controller!.value;
+          if (value.hasError) {
+            print('🚨 Playback error detected:');
+            print('   - Error: ${value.errorDescription}');
+            print('   - Position: ${value.position}');
+            print('   - Buffered: ${value.buffered.length} parts');
+            // Auto-retry on error
+            _retryPlayback();
           }
-          throw TimeoutException('Video initialization timed out after 10 seconds');
-        },
-      );
-      
-      final loadTime = DateTime.now().difference(startTime);
-      print('\n⏱️ Performance Metrics:');
-      print('   - Total load time: ${loadTime.inMilliseconds}ms');
-      print('   - Init time: ${DateTime.now().difference(initStartTime).inMilliseconds}ms');
-      
-      if (_controller?.value.hasError ?? false) {
-        print('🚨 Controller has error: ${_controller?.value.errorDescription}');
-        print('📡 Network type at error: $connectionType');
-        throw Exception(_controller?.value.errorDescription);
-      }
-      
-      print('✅ Controller initialized');
-      print('📊 Video details:');
-      print('   - Duration: ${_controller?.value.duration.inSeconds}s');
-      print('   - Size: ${_controller?.value.size.width}x${_controller?.value.size.height}');
-      print('   - Buffered: ${_controller?.value.buffered.length} parts');
-      print('   - Is buffering: ${_controller?.value.isBuffering}');
-      print('   - Is playing: ${_controller?.value.isPlaying}');
-      
-      await _controller?.setLooping(true);
-      print('🔁 Looping enabled');
-      
-      // Add listener for buffering state
-      _controller?.addListener(() {
-        if (_controller!.value.isBuffering) {
-          print('📶 Buffering started at position: ${_controller!.value.position}');
-        }
-      });
-      
-      // Add PWA-specific playback monitoring
-      _controller?.addListener(() {
-        final value = _controller!.value;
-        if (value.isBuffering) {
-          print('\n📶 Buffering Status (PWA):');
-          print('   - Position: ${value.position}');
-          print('   - Network: $connectionType');
-          print('   - Buffered parts: ${value.buffered.length}');
-          for (final range in value.buffered) {
-            print('   - Range: ${range.toString()}');
+          
+          if (value.isBuffering) {
+            print('📶 Buffering Status:');
+            print('   - Position: ${value.position}');
+            print('   - Network: $connectionType');
+            print('   - Buffered parts: ${value.buffered.length}');
+          }
+        });
+
+        if (mounted) {
+          setState(() => _isInitialized = true);
+          if (widget.isVisible && _controller != null) {
+            print('▶️ Starting playback...');
+            await _controller!.play();
+            // Verify playback actually started
+            if (_controller!.value.isPlaying) {
+              print('✅ Playback confirmed started');
+            } else {
+              print('⚠️ Playback may not have started properly');
+              _retryPlayback();
+            }
           }
         }
-      });
-      
-      if (mounted) {
-        print('🎯 Widget still mounted, updating state');
-        setState(() => _isInitialized = true);
-        if (widget.isVisible && _controller != null) {
-          print('▶️ Auto-playing video');
-          await _controller!.play();
-          print('✅ Playback started');
+      } catch (initError) {
+        print('❌ Initialization error: $initError');
+        if (!initializationCompleted && mounted) {
+          disposeController();
         }
-      } else {
-        print('❌ Widget not mounted after initialization');
+        rethrow;
       }
     } catch (e, stackTrace) {
-      print('\n💥 Error Details (PWA):');
+      print('\n💥 Fatal Error:');
       print('❌ Error type: ${e.runtimeType}');
       print('🚨 Error message: $e');
       print('📱 Platform: ${_getPlatformType()}');
       print('🌐 Network: $connectionType');
       print('⏱️ Time since start: ${DateTime.now().difference(startTime).inMilliseconds}ms');
-      if (_controller != null) {
-        print('🎮 Controller state at error:');
-        print('   - Initialized: ${_controller?.value.isInitialized}');
-        print('   - Playing: ${_controller?.value.isPlaying}');
-        print('   - Has error: ${_controller?.value.hasError}');
-        print('   - Is buffering: ${_controller?.value.isBuffering}');
-        print('   - Error description: ${_controller?.value.errorDescription}');
-        print('   - Position: ${_controller?.value.position}');
-      }
       print('📍 Stack trace: $stackTrace');
+      
+      // Ensure cleanup
+      if (mounted) {
+        disposeController();
+      }
+    }
+  }
+
+  // Add retry mechanism
+  Future<void> _retryPlayback() async {
+    if (!mounted || _controller == null) return;
+    
+    print('🔄 Attempting playback retry');
+    try {
+      await _controller!.pause();
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted && _controller != null) {
+        await _controller!.play();
+        print('✅ Retry playback attempt completed');
+      }
+    } catch (e) {
+      print('❌ Retry playback failed: $e');
     }
   }
 
