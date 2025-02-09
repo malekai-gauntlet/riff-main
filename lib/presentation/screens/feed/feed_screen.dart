@@ -146,12 +146,24 @@ class _FeedScreenState extends State<FeedScreen> {
 
   // Handle page changes and electric video sequence
   void _handlePageChange(int index) async {
+    print('📱 PAGE CHANGE: Moving to index $index');
+    print('🔄 Current video count in memory: ${_videos.length}');
+    
     // Stop tracking previous video
     await _electricSequence.stopWatching();
     
     setState(() {
       _currentPage = index;
     });
+
+    // Log the transition
+    if (index > 0) {
+      print('📊 Previous video: ${_videos[index - 1].id}');
+    }
+    print('📊 Current video: ${_videos[index].id}');
+    if (index < _videos.length - 1) {
+      print('📊 Next video: ${_videos[index + 1].id}');
+    }
 
     // Check if we should show an electric video
     if (_electricSequence.shouldShowElectricNext()) {
@@ -260,11 +272,15 @@ class _VideoItem extends StatefulWidget {
 class _VideoItemState extends State<_VideoItem> {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
+  final String _instanceId = DateTime.now().millisecondsSinceEpoch.toString();
 
   @override
   void initState() {
     super.initState();
-    print('🎥 Initializing video: ${widget.video.id} (preload: ${widget.shouldPreload})');
+    print('🎥 [Instance: $_instanceId] Creating new video item:');
+    print('   - Video ID: ${widget.video.id}');
+    print('   - Preload: ${widget.shouldPreload}');
+    print('   - Is Visible: ${widget.isVisible}');
     _initializeVideo();
     if (widget.isVisible) {
       widget.onVisibilityChanged(true);
@@ -274,51 +290,71 @@ class _VideoItemState extends State<_VideoItem> {
   @override
   void didUpdateWidget(_VideoItem oldWidget) {
     super.didUpdateWidget(oldWidget);
+    print('🔄 [Instance: $_instanceId] Widget updated:');
+    print('   - Video ID: ${widget.video.id}');
+    print('   - Old visible: ${oldWidget.isVisible} -> New visible: ${widget.isVisible}');
+    print('   - Is Initialized: $_isInitialized');
+    
     if (oldWidget.isVisible != widget.isVisible) {
       widget.onVisibilityChanged(widget.isVisible);
       if (widget.isVisible) {
-        _controller.play();
+        print('▶️ [Instance: $_instanceId] Attempting to play video');
+        if (_isInitialized) {
+          _controller.play();
+        } else {
+          print('⚠️ [Instance: $_instanceId] Tried to play but not initialized');
+        }
       } else {
+        print('⏸️ [Instance: $_instanceId] Pausing video');
         _controller.pause();
       }
     }
   }
 
+  @override
+  void dispose() {
+    print('🗑️ [Instance: $_instanceId] Disposing video item:');
+    print('   - Video ID: ${widget.video.id}');
+    print('   - Was Initialized: $_isInitialized');
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _initializeVideo() async {
-    print('🎥 Starting initialization for video: ${widget.video.id}');
-    print('📱 Video URL: ${widget.video.url}');
+    print('🎥 [Instance: $_instanceId] Starting initialization:');
+    print('   - Video ID: ${widget.video.id}');
+    print('   - URL: ${widget.video.url}');
     
     try {
-      print('🎥 Creating VideoPlayerController...');
+      print('🎥 [Instance: $_instanceId] Creating controller...');
       _controller = VideoPlayerController.network(widget.video.url);
       
-      print('🎥 Calling initialize()...');
+      print('🎥 [Instance: $_instanceId] Calling initialize()...');
       await _controller.initialize();
-      print('✅ Initialize completed. Video size: ${_controller.value.size}');
+      print('✅ [Instance: $_instanceId] Initialize completed:');
+      print('   - Video size: ${_controller.value.size}');
+      print('   - Duration: ${_controller.value.duration}');
       
-      print('🔄 Setting video to loop...');
+      print('🔄 [Instance: $_instanceId] Setting video to loop...');
       await _controller.setLooping(true);
-      print('✅ Loop setting applied');
       
       if (mounted) {
         setState(() {
           _isInitialized = true;
-          print('✅ State updated, initialization complete for: ${widget.video.id}');
+          print('✅ [Instance: $_instanceId] State updated, ready to play');
         });
         
-        // Only attempt to play after initialization and state update
         if (widget.isVisible) {
-          print('▶️ Video is visible and initialized, starting playback...');
+          print('▶️ [Instance: $_instanceId] Video is visible, starting playback');
           await _controller.play();
-          print('✅ Playback started successfully');
+          print('✅ [Instance: $_instanceId] Playback started');
         }
       }
     } catch (e, stackTrace) {
-      print('❌ Error initializing video: $e');
-      print('📍 Error location: ${stackTrace.toString().split('\n')[0]}');
-      print('🔍 Video details:');
-      print('   - ID: ${widget.video.id}');
-      print('   - URL: ${widget.video.url}');
+      print('❌ [Instance: $_instanceId] Error initializing video:');
+      print('   - Error: $e');
+      print('   - Location: ${stackTrace.toString().split('\n')[0]}');
+      print('   - Video ID: ${widget.video.id}');
       print('   - Is Visible: ${widget.isVisible}');
       print('   - Should Preload: ${widget.shouldPreload}');
     }
@@ -341,12 +377,6 @@ class _VideoItemState extends State<_VideoItem> {
     } catch (e) {
       print('Error toggling play/pause: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override
