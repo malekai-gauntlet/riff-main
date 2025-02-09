@@ -36,6 +36,27 @@ class _FeedScreenState extends State<FeedScreen> {
   // Track current page
   int _currentPage = 0;
   
+  // Track number of active controllers
+  int _activeControllers = 0;
+
+  // Method to update active controller count
+  void _updateActiveControllerCount(bool isActive) {
+    setState(() {
+      if (isActive) {
+        _activeControllers++;
+        print('➕ Controller added (Total: $_activeControllers)');
+      } else {
+        _activeControllers--;
+        print('➖ Controller removed (Total: $_activeControllers)');
+      }
+      
+      // Sanity check
+      if (_activeControllers > 3) {
+        print('⚠️ Warning: More than 3 active controllers ($_activeControllers)');
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -65,10 +86,9 @@ class _FeedScreenState extends State<FeedScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedGenre != widget.selectedGenre) {
       print('📱 Genre changed to: ${_getGenreName(widget.selectedGenre)}');
-      // Reset page controller and clear videos before loading new ones
       _pageController.jumpTo(0);
       setState(() => _videos = []);
-      _loadVideos(); // Reload videos when genre changes
+      _loadVideos();
     }
   }
 
@@ -117,31 +137,18 @@ class _FeedScreenState extends State<FeedScreen> {
 
   // Handle page changes and electric video sequence
   void _handlePageChange(int index) async {
-    print('\n🎯 Active Window Status:');
+    // Simple log to show which videos are active
+    print('\n📱 Video Window:');
     if (index > 0) {
-      print('   Previous [$index-1]: ${_videos[index - 1].id} (Active)');
+      print('Previous: ${_videos[index - 1].id}');
     }
-    print('   Current  [$index]: ${_videos[index].id} (Active)');
+    print('Current: ${_videos[index].id}');
     if (index < _videos.length - 1) {
-      print('   Next    [$index+1]: ${_videos[index + 1].id} (Active)');
+      print('Next: ${_videos[index + 1].id}');
     }
-    if (index < _videos.length - 2) {
-      print('   Future  [$index+2]: ${_videos[index + 2].id} (Inactive)');
-    }
-    print('🎮 Total videos in memory: ${_videos.length}');
 
     await _electricSequence.stopWatching();
-    setState(() {
-      _currentPage = index;
-      
-      // Keep only necessary videos in memory (window of 5: 2 before, current, 2 after)
-      if (_videos.length > 5) {
-        int startKeep = (index - 2).clamp(0, _videos.length);
-        int endKeep = (index + 3).clamp(0, _videos.length);
-        _videos = _videos.sublist(startKeep, endKeep);
-        print('📦 Trimmed videos list to: ${_videos.length} videos');
-      }
-    });
+    setState(() => _currentPage = index);
 
     if (_electricSequence.shouldShowElectricNext()) {
       final nextElectricVideo = await _electricSequence.getNextElectricVideo();
@@ -248,13 +255,11 @@ class _VideoItem extends StatefulWidget {
 class _VideoItemState extends State<_VideoItem> {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
-  final String _instanceId = DateTime.now().millisecondsSinceEpoch.toString();
 
   @override
   void initState() {
     super.initState();
     if (widget.isInActiveWindow) {
-      print('🎥 Initializing: ${widget.video.id}');
       _initializeVideo();
     }
     
@@ -267,13 +272,12 @@ class _VideoItemState extends State<_VideoItem> {
   void didUpdateWidget(_VideoItem oldWidget) {
     super.didUpdateWidget(oldWidget);
     
+    // Simplified window management
     if (oldWidget.isInActiveWindow != widget.isInActiveWindow) {
       if (!widget.isInActiveWindow && _isInitialized) {
-        print('🗑️ Disposing: ${widget.video.id}');
         _controller.dispose();
         _isInitialized = false;
       } else if (widget.isInActiveWindow && !_isInitialized) {
-        print('🎥 Initializing: ${widget.video.id}');
         _initializeVideo();
       }
     }
@@ -309,7 +313,7 @@ class _VideoItemState extends State<_VideoItem> {
         }
       }
     } catch (e) {
-      print('❌ Failed to initialize: ${widget.video.id}');
+      print('❌ Error loading video: ${widget.video.id}');
     }
   }
 

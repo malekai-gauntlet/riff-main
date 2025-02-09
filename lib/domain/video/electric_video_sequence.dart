@@ -8,7 +8,6 @@ class ElectricVideoSequence {
   static final ElectricVideoSequence _instance = ElectricVideoSequence._internal();
   factory ElectricVideoSequence() => _instance;
   ElectricVideoSequence._internal() {
-    print('🎸 ElectricVideoSequence initialized');
   }
 
   // Track if we should show electric videos next
@@ -26,7 +25,6 @@ class ElectricVideoSequence {
     if (_suppressElectric != value) {
       _suppressElectric = value;
       onSuppressStateChanged?.call();
-      print('🔄 Electric videos suppression changed to: $value');
     }
   }
 
@@ -47,20 +45,15 @@ class ElectricVideoSequence {
     _currentVideoId = videoId;
     _watchStartTime = DateTime.now();
     _playedVideos.add(videoId);  // Add to played videos
-    print('🎸 Started watching video: $videoId at ${_watchStartTime!.toIso8601String()}');
-    print('📝 Total played videos: ${_playedVideos.length}');
   }
 
   // Stop tracking watch time and process the result
   Future<void> stopWatching() async {
     if (_currentVideoId == null || _watchStartTime == null) {
-      print('❌ stopWatching called but no video was being tracked');
       return;
     }
 
     final watchDuration = DateTime.now().difference(_watchStartTime!);
-    print('🎸 Stopped watching video: $_currentVideoId');
-    print('⏱️ Watch duration: ${watchDuration.inSeconds} seconds');
     
     // Check if current video has electric tag
     final videoDoc = await FirebaseFirestore.instance
@@ -69,19 +62,15 @@ class ElectricVideoSequence {
         .get();
     
     final tags = List<String>.from(videoDoc.data()?['tags'] ?? []);
-    print('🏷️ Video tags: $tags');
     
     if (tags.contains('electric')) {
       // If electric video watched for less than 3 seconds
       if (watchDuration.inSeconds < 3) {
         suppressElectric = true;
         _shouldShowElectric = false;
-        print('🚫 Electric video watched for <3 seconds, suppressing all electric videos');
       }
       // If watched for more than 6 seconds
       else if (watchDuration.inSeconds > 6) {
-        print('✅ Watch threshold met (> 6 seconds)');
-        
         // Check if there are any unplayed electric videos
         final unplayedQuery = await FirebaseFirestore.instance
             .collection('videos')
@@ -91,35 +80,25 @@ class ElectricVideoSequence {
             
         if (unplayedQuery.docs.isNotEmpty) {
           _shouldShowElectric = true;
-          print('⚡ Unplayed electric videos found! Will show one next');
-        } else {
-          print('🚫 No unplayed electric videos remaining');
         }
       }
-    } else {
-      print('🎸 Not an electric video');
     }
 
     // Reset tracking
     _currentVideoId = null;
     _watchStartTime = null;
-    print('🔄 Reset tracking variables');
   }
 
   // Check if next video should be electric
   bool shouldShowElectricNext() {
-    print('🤔 Checking if should show electric next: $_shouldShowElectric');
     return _shouldShowElectric;
   }
 
   // Get next electric video
   Future<DocumentSnapshot?> getNextElectricVideo() async {
     if (!_shouldShowElectric || suppressElectric) {
-      print('❌ Not showing electric video: shouldShow=$_shouldShowElectric, suppressed=$suppressElectric');
       return null;
     }
-
-    print('Searching for next unplayed electric video...');
     
     // Get all unplayed electric videos
     final querySnapshot = await FirebaseFirestore.instance
@@ -129,7 +108,6 @@ class ElectricVideoSequence {
         .get();
 
     if (querySnapshot.docs.isEmpty) {
-      print('❌ No unplayed electric videos remaining');
       _shouldShowElectric = false;
       return null;
     }
@@ -140,7 +118,6 @@ class ElectricVideoSequence {
     // Return a random unplayed electric video
     final random = DateTime.now().millisecondsSinceEpoch % querySnapshot.docs.length;
     final selectedVideo = querySnapshot.docs[random];
-    print('✨ Selected next unplayed electric video: ${selectedVideo.id}');
     return selectedVideo;
   }
 } 
