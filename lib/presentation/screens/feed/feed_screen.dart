@@ -28,6 +28,9 @@ class _FeedScreenState extends State<FeedScreen> {
   // List to store fetched videos
   List<Video> _videos = [];
   
+  // Map to store persistent keys for videos
+  final Map<String, GlobalKey<_VideoItemState>> _videoKeys = {};
+  
   // Loading state
   bool _isLoading = false;
 
@@ -77,6 +80,8 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   void dispose() {
+    // Clean up all keys when disposing
+    _videoKeys.clear();
     _pageController.dispose();
     super.dispose();
   }
@@ -87,6 +92,8 @@ class _FeedScreenState extends State<FeedScreen> {
     if (oldWidget.selectedGenre != widget.selectedGenre) {
       print('📱 Genre changed to: ${_getGenreName(widget.selectedGenre)}');
       _pageController.jumpTo(0);
+      // Clear keys when changing genres
+      _videoKeys.clear();
       setState(() => _videos = []);
       _loadVideos();
     }
@@ -164,9 +171,15 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   // Get GlobalKey for video item
-  GlobalKey<_VideoItemState>? _getVideoItemKey(int index) {
-    if (index < 0 || index >= _videos.length) return null;
-    return GlobalKey<_VideoItemState>();
+  GlobalKey<_VideoItemState> _getVideoItemKey(int index) {
+    if (index < 0 || index >= _videos.length) {
+      throw Exception('Invalid video index');
+    }
+    final videoId = _videos[index].id;
+    return _videoKeys.putIfAbsent(videoId, () {
+      print('🔑 Creating new key for video: $videoId');
+      return GlobalKey<_VideoItemState>();
+    });
   }
 
   @override
@@ -248,7 +261,7 @@ class _VideoItem extends StatefulWidget {
   final Function(bool isVisible) onVisibilityChanged;
   final bool shouldPreload;
   final bool isInActiveWindow;
-  final GlobalKey<_VideoItemState>? key;
+  final GlobalKey<_VideoItemState> key;
 
   const _VideoItem({
     required this.video,
@@ -256,7 +269,7 @@ class _VideoItem extends StatefulWidget {
     required this.onVisibilityChanged,
     this.shouldPreload = false,
     this.isInActiveWindow = false,
-    this.key,
+    required this.key,
   });
 
   @override
