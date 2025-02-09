@@ -12,6 +12,7 @@ import '../../widgets/video/video_action_buttons.dart';
 import '../../../domain/video/electric_video_sequence.dart';
 import '../../physics/one_page_scroll_physics.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:cached_network_image/cached_network_image.dart';
 
 class FeedScreen extends StatefulWidget {
   final int selectedGenre;
@@ -159,6 +160,17 @@ class _FeedScreenState extends State<FeedScreen> {
           ? genreFilteredVideos.where((video) => !video.tags.contains('electric')).toList()
           : genreFilteredVideos;
       
+      // Comment out problematic precaching but keep for reference
+      // for (final video in filteredVideos) {
+      //   if (video.thumbnailUrl != null) {
+      //     print('🖼️ Preloading thumbnail for video: ${video.id}');
+      //     precacheImage(
+      //       CachedNetworkImageProvider(video.thumbnailUrl!),
+      //       context,
+      //     );
+      //   }
+      // }
+      
       setState(() => _videos = filteredVideos);
     } catch (e) {
       print('❌ Error loading videos: $e');
@@ -175,9 +187,9 @@ class _FeedScreenState extends State<FeedScreen> {
     print('🔑 Active keys count: ${_videoKeys.length}');
     print('🎮 Active controllers: $_activeControllers');
     
-    // Dispose controllers that are more than 1 page away
+    // Dispose controllers that are more than 2 pages away
     for (int i = 0; i < _videos.length; i++) {
-      if (i != index && (i < index - 1 || i > index + 1)) {
+      if (i != index && (i < index - 2 || i > index + 2)) {
         final key = _getVideoItemKey(i);
         if (key.currentState?.isInitialized ?? false) {
           print('🗑️ Disposing controller for video ${_videos[i].id} (distance: ${(i - index).abs()} pages)');
@@ -193,12 +205,14 @@ class _FeedScreenState extends State<FeedScreen> {
       currentKey.currentState?._initializeVideo();
     }
     
-    // Pre-initialize the next video if it exists
-    if (index + 1 < _videos.length) {
-      final nextKey = _getVideoItemKey(index + 1);
-      if (!(nextKey.currentState?.isInitialized ?? false)) {
-        print('🎥 Pre-initializing next video');
-        nextKey.currentState?._initializeVideo();
+    // Pre-initialize the next two videos if they exist
+    for (int i = 1; i <= 2; i++) {
+      if (index + i < _videos.length) {
+        final nextKey = _getVideoItemKey(index + i);
+        if (!(nextKey.currentState?.isInitialized ?? false)) {
+          print('🎥 Pre-initializing video at index ${index + i}');
+          nextKey.currentState?._initializeVideo();
+        }
       }
     }
     
@@ -552,6 +566,16 @@ class _VideoItemState extends State<_VideoItem> {
           setState(() => _isInitialized = true);
           if (widget.isVisible && _controller != null) {
             print('✅ Video ready for playback - tap to play');
+            // Autoplay code - commented out for mobile browser compatibility
+            // print('▶️ Starting playback...');
+            // await _controller!.play();
+            // // Verify playback actually started
+            // if (_controller!.value.isPlaying) {
+            //   print('✅ Playback confirmed started');
+            // } else {
+            //   print('⚠️ Playback may not have started properly');
+            //   _retryPlayback();
+            // }
           }
         }
       } catch (initError) {
@@ -617,32 +641,36 @@ class _VideoItemState extends State<_VideoItem> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Video player
-          if (widget.isVisible && _isInitialized && _controller != null)
-            VideoPlayer(_controller!)
+          // Always show thumbnail first
+          if (widget.video.thumbnailUrl != null)
+            CachedNetworkImage(
+              imageUrl: widget.video.thumbnailUrl!,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(color: Colors.black),
+              errorWidget: (context, url, error) => Container(color: Colors.black),
+            )
           else
-            const Center(
-              child: CircularProgressIndicator(
-                color: Colors.white,
-              ),
-            ),
-            
-          // Play/Pause indicator overlay - Always show until first play
+            Container(color: Colors.black),
+
+          // Show video player on top when ready
           if (widget.isVisible && _isInitialized && _controller != null)
-            AnimatedOpacity(
-              opacity: !_controller!.value.isPlaying ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: Container(
-                color: Colors.black.withOpacity(0.3),
-                child: Center(
-                  child: Icon(
-                    _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                    size: 64,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
+            VideoPlayer(_controller!),
+            
+          // Always show play button until video starts
+          AnimatedOpacity(
+            opacity: !_isInitialized || !(_controller?.value.isPlaying ?? false) ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 200),
+            child: Container(
+              color: Colors.black.withOpacity(0.3),
+              child: Center(
+                child: Icon(
+                  Icons.play_arrow,
+                  size: 64,
+                  color: Colors.white.withOpacity(0.8),
                 ),
               ),
             ),
+          ),
             
           // Action buttons (right side)
           Positioned(
