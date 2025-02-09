@@ -137,14 +137,21 @@ class _FeedScreenState extends State<FeedScreen> {
 
   // Handle page changes and electric video sequence
   void _handlePageChange(int index) async {
-    // Simple log to show which videos are active
-    print('\n📱 Video Window:');
+    print('\n📱 Feed Status:');
+    print('Loading video: ${_videos[index].id}');
+    
+    // Dispose previous and next video controllers immediately
     if (index > 0) {
-      print('Previous: ${_videos[index - 1].id}');
+      final prevWidget = _getVideoItemKey(index - 1)?.currentState;
+      if (prevWidget != null) {
+        prevWidget.disposeController();
+      }
     }
-    print('Current: ${_videos[index].id}');
     if (index < _videos.length - 1) {
-      print('Next: ${_videos[index + 1].id}');
+      final nextWidget = _getVideoItemKey(index + 1)?.currentState;
+      if (nextWidget != null) {
+        nextWidget.disposeController();
+      }
     }
 
     await _electricSequence.stopWatching();
@@ -160,62 +167,34 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
+  // Get GlobalKey for video item
+  GlobalKey<_VideoItemState>? _getVideoItemKey(int index) {
+    if (index < 0 || index >= _videos.length) return null;
+    return GlobalKey<_VideoItemState>();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Colors.white,
-              ),
-            )
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
           : PageView.builder(
               controller: _pageController,
               scrollDirection: Axis.vertical,
               physics: const OnePageScrollPhysics().applyTo(
                 const ClampingScrollPhysics(),
               ),
-              itemCount: _videos.length + 1, // Add 1 for end screen
+              itemCount: _videos.length + 1,
               onPageChanged: _handlePageChange,
               itemBuilder: (context, index) {
-                // Show end screen if we're at the last index
                 if (index == _videos.length) {
-                  return Container(
-                    color: Colors.black,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              "That's all the riffs!",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              "More coming tomorrow.",
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
-                                fontSize: 18,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
+                  return _buildEndScreen();
                 }
                 
                 final video = _videos[index];
                 return _VideoItem(
+                  key: _getVideoItemKey(index),
                   video: video,
                   isVisible: index == _currentPage,
                   onVisibilityChanged: (isVisible) {
@@ -223,11 +202,45 @@ class _FeedScreenState extends State<FeedScreen> {
                       _electricSequence.startWatching(video.id);
                     }
                   },
-                  shouldPreload: index == _currentPage + 1,
-                  isInActiveWindow: (index >= _currentPage - 1 && index <= _currentPage + 1), // In 3-video window
+                  shouldPreload: false, // Disable preloading
+                  isInActiveWindow: index == _currentPage, // Only current video is active
                 );
               },
             ),
+    );
+  }
+
+  Widget _buildEndScreen() {
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                "That's all the riffs!",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "More coming tomorrow.",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 18,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -239,6 +252,7 @@ class _VideoItem extends StatefulWidget {
   final Function(bool isVisible) onVisibilityChanged;
   final bool shouldPreload;
   final bool isInActiveWindow;
+  final GlobalKey<_VideoItemState>? key;
 
   const _VideoItem({
     required this.video,
@@ -246,6 +260,7 @@ class _VideoItem extends StatefulWidget {
     required this.onVisibilityChanged,
     this.shouldPreload = false,
     this.isInActiveWindow = false,
+    this.key,
   });
 
   @override
@@ -253,13 +268,15 @@ class _VideoItem extends StatefulWidget {
 }
 
 class _VideoItemState extends State<_VideoItem> {
-  late VideoPlayerController _controller;
+  // Change from late to nullable
+  VideoPlayerController? _controller;
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.isInActiveWindow) {
+      print('🎥 Initializing video: ${widget.video.id}');
       _initializeVideo();
     }
     
@@ -272,12 +289,11 @@ class _VideoItemState extends State<_VideoItem> {
   void didUpdateWidget(_VideoItem oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    // Simplified window management
     if (oldWidget.isInActiveWindow != widget.isInActiveWindow) {
-      if (!widget.isInActiveWindow && _isInitialized) {
-        _controller.dispose();
-        _isInitialized = false;
-      } else if (widget.isInActiveWindow && !_isInitialized) {
+      if (!widget.isInActiveWindow) {
+        disposeController();
+      } else if (!_isInitialized) {
+        print('🎥 Initializing video: ${widget.video.id}');
         _initializeVideo();
       }
     }
@@ -285,31 +301,38 @@ class _VideoItemState extends State<_VideoItem> {
     if (oldWidget.isVisible != widget.isVisible) {
       widget.onVisibilityChanged(widget.isVisible);
       if (widget.isVisible && _isInitialized) {
-        _controller.play();
+        _controller?.play();
       } else if (_isInitialized) {
-        _controller.pause();
+        _controller?.pause();
       }
+    }
+  }
+
+  void disposeController() {
+    if (_isInitialized && _controller != null) {
+      print('🗑️ Disposing video: ${widget.video.id}');
+      _controller!.dispose();
+      _isInitialized = false;
+      _controller = null;
     }
   }
 
   @override
   void dispose() {
-    if (_isInitialized) {
-      _controller.dispose();
-    }
+    disposeController();
     super.dispose();
   }
 
   Future<void> _initializeVideo() async {
     try {
       _controller = VideoPlayerController.network(widget.video.url);
-      await _controller.initialize();
-      await _controller.setLooping(true);
+      await _controller?.initialize();
+      await _controller?.setLooping(true);
       
       if (mounted) {
         setState(() => _isInitialized = true);
-        if (widget.isVisible) {
-          await _controller.play();
+        if (widget.isVisible && _controller != null) {
+          await _controller!.play();
         }
       }
     } catch (e) {
@@ -318,13 +341,13 @@ class _VideoItemState extends State<_VideoItem> {
   }
 
   void _togglePlayPause() async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || _controller == null) return;
 
     try {
-      if (_controller.value.isPlaying) {
-        await _controller.pause();
+      if (_controller!.value.isPlaying) {
+        await _controller!.pause();
       } else {
-        await _controller.play();
+        await _controller!.play();
       }
       setState(() {});
     } catch (e) {
@@ -335,14 +358,14 @@ class _VideoItemState extends State<_VideoItem> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      behavior: HitTestBehavior.opaque, // Make sure tap is detected anywhere
+      behavior: HitTestBehavior.opaque,
       onTap: _togglePlayPause,
       child: Stack(
         fit: StackFit.expand,
         children: [
           // Video player
-          if (widget.isVisible && _isInitialized)
-            VideoPlayer(_controller)
+          if (widget.isVisible && _isInitialized && _controller != null)
+            VideoPlayer(_controller!)
           else
             const Center(
               child: CircularProgressIndicator(
@@ -351,9 +374,9 @@ class _VideoItemState extends State<_VideoItem> {
             ),
             
           // Play/Pause indicator overlay
-          if (widget.isVisible && _isInitialized)
+          if (widget.isVisible && _isInitialized && _controller != null)
             AnimatedOpacity(
-              opacity: _controller.value.isPlaying ? 0.0 : 1.0,
+              opacity: _controller!.value.isPlaying ? 0.0 : 1.0,
               duration: const Duration(milliseconds: 200),
               child: Container(
                 color: Colors.black.withOpacity(0.2),
