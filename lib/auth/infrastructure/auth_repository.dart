@@ -37,7 +37,7 @@ class AuthRepository {
     
     return AuthUser(
       id: user.uid,
-      email: user.email!,
+      email: user.email ?? '', // Make email optional for anonymous users
       displayName: user.displayName,
       photoURL: user.photoURL,
       emailVerified: user.emailVerified,
@@ -87,6 +87,23 @@ class AuthRepository {
   // Sign out
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
+  }
+
+  // Sign in anonymously as guest
+  Future<AuthUser?> signInAnonymously() async {
+    try {
+      // Set persistence to local for guest users
+      await setPersistence(true);
+      
+      print('📱 Starting anonymous sign-in...'); // Debug log
+      final userCredential = await _firebaseAuth.signInAnonymously();
+      print('✅ Anonymous sign-in successful'); // Debug log
+      
+      return _mapFirebaseUser(userCredential.user);
+    } on FirebaseAuthException catch (e) {
+      print('❌ Anonymous sign-in error: ${e.code}'); // Debug log
+      throw _mapFirebaseAuthError(e);
+    }
   }
 
   // Map Firebase Auth errors to user-friendly messages

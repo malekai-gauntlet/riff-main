@@ -11,7 +11,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
   final _authRepository = AuthRepository();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -19,6 +19,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
+  late final AnimationController _exitController;
+  late final Animation<Offset> _logoSlideAnimation;
+  late final Animation<Offset> _titleSlideAnimation;
+  late final Animation<Offset> _emailButtonSlideAnimation;
+  late final Animation<Offset> _skipButtonSlideAnimation;
   String? _errorMessage;
   bool _isLoading = false;
   bool _showInputs = false;
@@ -49,6 +54,45 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         reverseCurve: const Interval(0.5, 1.0, curve: Curves.easeIn),
       ),
     );
+    
+    // Initialize exit animations controller
+    _exitController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500), // Back to 1 second duration
+    );
+
+    // Create staggered slide animations for each element
+    _logoSlideAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(3.0, 0.0),
+    ).animate(CurvedAnimation(
+      parent: _exitController,
+      curve: const Interval(0.0, 0.25, curve: Curves.easeInOut),
+    ));
+
+    _titleSlideAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(3.0, 0.0),
+    ).animate(CurvedAnimation(
+      parent: _exitController,
+      curve: const Interval(0.25, 0.5, curve: Curves.easeInOut),
+    ));
+
+    _emailButtonSlideAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(3.0, 0.0),
+    ).animate(CurvedAnimation(
+      parent: _exitController,
+      curve: const Interval(0.5, 0.75, curve: Curves.easeInOut),
+    ));
+
+    _skipButtonSlideAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(3.0, 0.0),
+    ).animate(CurvedAnimation(
+      parent: _exitController,
+      curve: const Interval(0.75, 1.0, curve: Curves.easeInOut),
+    ));
   }
 
   @override
@@ -57,6 +101,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _passwordController.dispose();
     _displayNameController.dispose();
     _animationController.dispose();
+    _exitController.dispose();
     super.dispose();
   }
 
@@ -176,6 +221,37 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
+  // Handle guest sign-in
+  Future<void> _signInAsGuest() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await _exitController.forward();
+      
+      await _authRepository.signInAnonymously();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Welcome! Signed in as guest')),
+        );
+      }
+    } catch (e) {
+      _exitController.reverse();
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -192,244 +268,67 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 margin: EdgeInsets.only(
                   top: _showInputs ? 60 : MediaQuery.of(context).size.height * 0.3,
                 ),
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: Column(
-                      children: [
-                        // Logo
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 500),
-                          width: _showInputs ? 80 : 120,
-                          height: _showInputs ? 80 : 120,
-                          child: SvgPicture.asset(
-                            'assets/images/electric-guitar.svg',
-                            fit: BoxFit.contain,
-                          ),
+                child: Column(
+                  children: [
+                    // Logo with slide animation
+                    SlideTransition(
+                      position: _logoSlideAnimation,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        width: _showInputs ? 80 : 120,
+                        height: _showInputs ? 80 : 120,
+                        child: SvgPicture.asset(
+                          'assets/images/electric-guitar.svg',
+                          fit: BoxFit.contain,
                         ),
-                        const SizedBox(height: 24),
-                        // Title with animated size
-                        AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 300),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: _isSignUpMode ? 30 : 34,
-                            fontWeight: FontWeight.w600,
-                            height: 1.2,
-                            letterSpacing: -0.5,
-                          ),
-                          child: Text(
-                            _isSignUpMode ? 'Create\nAccount' : 'Welcome to\nRiff',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 24),
+                    // Title with slide animation
+                    SlideTransition(
+                      position: _titleSlideAnimation,
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 300),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: _isSignUpMode ? 30 : 34,
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                          letterSpacing: -0.5,
+                        ),
+                        child: Text(
+                          _isSignUpMode ? 'Create\nAccount' : 'Welcome to\nRiff',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              
-              // Email/Password Inputs with animated height
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 300),
-                opacity: _showInputs ? 1.0 : 0.0,
-                child: _showInputs ? AnimatedSize(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 40),
-                      // Email Input
-                      TextField(
-                        controller: _emailController,
-                        enabled: !_isLoading,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'Email',
-                          hintStyle: TextStyle(color: Colors.grey[400]),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[800]!),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.white),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Display Name Input (only in sign-up mode)
-                      if (_isSignUpMode) ...[
-                        TextField(
-                          controller: _displayNameController,
-                          enabled: !_isLoading,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            hintText: 'Display Name',
-                            hintStyle: TextStyle(color: Colors.grey[400]),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey[800]!),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Colors.white),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      
-                      // Password Input
-                      TextField(
-                        controller: _passwordController,
-                        enabled: !_isLoading,
-                        obscureText: true,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'Password',
-                          hintStyle: TextStyle(color: Colors.grey[400]),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[800]!),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.white),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Terms of Service Checkbox (only in sign-up mode)
-                      if (_isSignUpMode)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 24),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: Checkbox(
-                                  value: _acceptedTerms,
-                                  onChanged: _isLoading ? null : (value) {
-                                    setState(() {
-                                      _acceptedTerms = value ?? false;
-                                    });
-                                  },
-                                  fillColor: MaterialStateProperty.resolveWith<Color>(
-                                    (Set<MaterialState> states) {
-                                      if (states.contains(MaterialState.disabled)) {
-                                        return Colors.grey;
-                                      }
-                                      if (states.contains(MaterialState.selected)) {
-                                        return Colors.white;
-                                      }
-                                      return Colors.transparent;
-                                    },
-                                  ),
-                                  checkColor: Colors.black,
-                                  side: BorderSide(
-                                    color: _isLoading ? Colors.grey : Colors.grey[400]!,
-                                    width: 1.5,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'I agree to the Terms of Service and Privacy Policy',
-                                  style: TextStyle(
-                                    color: _isLoading ? Colors.grey : Colors.grey[400],
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      
-                      // Sign In/Up Button with Loading State
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          _buildLoginButton(
-                            text: _isLoading 
-                              ? (_isSignUpMode ? 'Creating Account...' : 'Signing in...') 
-                              : (_isSignUpMode ? 'Create Account' : 'Sign in'),
-                            icon: _isLoading 
-                              ? Icons.hourglass_empty 
-                              : (_isSignUpMode ? Icons.person_add_outlined : Icons.arrow_forward),
-                            onTap: _isLoading ? null : (_isSignUpMode ? _signUp : _signIn),
-                          ),
-                          if (_isLoading)
-                            Positioned(
-                              right: 16,
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    _isSignUpMode ? Colors.black : Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      
-                      // Toggle text
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: TextButton(
-                          onPressed: _isLoading ? null : _toggleAuthMode,
-                          child: Text(
-                            _isSignUpMode 
-                              ? 'Already have an account? Sign in'
-                              : "Don't have an account? Sign up",
-                            style: TextStyle(
-                              color: _isLoading ? Colors.grey : Colors.grey[400],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      // Error Message
-                      if (_errorMessage != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: Text(
-                            _errorMessage!,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 14,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                    ],
-                  ),
-                ) : const SizedBox(),
               ),
               
               const Spacer(),
               
-              // Initial Email Button (only shown before inputs)
-              if (!_showInputs) _buildLoginButton(
-                text: 'Continue with E-mail',
-                icon: Icons.mail_outline,
-                onTap: _toggleInputs,
-              ),
+              // Initial buttons with slide animations
+              if (!_showInputs) ...[
+                SlideTransition(
+                  position: _emailButtonSlideAnimation,
+                  child: _buildLoginButton(
+                    text: 'Continue with E-mail',
+                    icon: Icons.mail_outline,
+                    onTap: _toggleInputs,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SlideTransition(
+                  position: _skipButtonSlideAnimation,
+                  child: _buildLoginButton(
+                    text: 'Skip Signup',
+                    icon: Icons.fast_forward_rounded,
+                    onTap: _isLoading ? null : _signInAsGuest,
+                    isSecondary: true,
+                  ),
+                ),
+              ],
               
               const SizedBox(height: 32),
             ],
