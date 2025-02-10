@@ -6,7 +6,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 // Web-specific imports
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+// ignore: avoid_web_libraries_in_flutter
 import 'dart:ui' as ui;
+import 'dart:js' as js;
 
 class VideoThumbnail extends StatelessWidget {
   // Properties for the video thumbnail
@@ -106,20 +108,23 @@ class VideoThumbnail extends StatelessWidget {
   Widget _buildWebImage(String url) {
     final String viewId = 'thumbnail-${url.hashCode}';
     
-    // Register the factory
+    // Register the factory for web platform
     if (kIsWeb) {
       // ignore: undefined_prefixed_name
-      ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
-        final img = html.ImageElement()
-          ..src = url
-          ..style.objectFit = 'cover'
-          ..style.width = '100%'
-          ..style.height = '100%'
-          ..style.cursor = 'pointer' // Make it look clickable
-          ..onClick.listen((_) => onTap()); // Add click handler
-
-        return img;
-      });
+      js.context.callMethod('eval', ["""
+        if (!window.hasRegistered${viewId}) {
+          window.hasRegistered${viewId} = true;
+          var img = document.createElement('img');
+          img.src = '$url';
+          img.style.objectFit = 'cover';
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.cursor = 'pointer';
+          window.flutterWebRenderer.registerViewFactory('$viewId', function(viewId) {
+            return img;
+          });
+        }
+      """]);
     }
 
     return MouseRegion(

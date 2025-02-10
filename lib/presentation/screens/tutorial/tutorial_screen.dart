@@ -7,7 +7,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 // Web-specific imports
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:ui' as ui;
+import 'dart:js' as js;
 
 class TutorialScreen extends StatelessWidget {
   final Video video;
@@ -150,14 +152,19 @@ class _TutorialCard extends StatelessWidget {
     
     if (kIsWeb) {
       // ignore: undefined_prefixed_name
-      ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
-        final img = html.ImageElement()
-          ..src = url
-          ..style.objectFit = 'cover'
-          ..style.width = '100%'
-          ..style.height = '100%';
-        return img;
-      });
+      js.context.callMethod('eval', ["""
+        if (!window.hasRegistered${viewId}) {
+          window.hasRegistered${viewId} = true;
+          var img = document.createElement('img');
+          img.src = '$url';
+          img.style.objectFit = 'cover';
+          img.style.width = '100%';
+          img.style.height = '100%';
+          window.flutterWebRenderer.registerViewFactory('$viewId', function(viewId) {
+            return img;
+          });
+        }
+      """]);
     }
 
     return HtmlElementView(
