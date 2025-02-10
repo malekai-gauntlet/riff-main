@@ -152,19 +152,14 @@ class _TutorialCard extends StatelessWidget {
     
     if (kIsWeb) {
       // ignore: undefined_prefixed_name
-      js.context.callMethod('eval', ["""
-        if (!window.hasRegistered${viewId}) {
-          window.hasRegistered${viewId} = true;
-          var img = document.createElement('img');
-          img.src = '$url';
-          img.style.objectFit = 'cover';
-          img.style.width = '100%';
-          img.style.height = '100%';
-          window.flutterWebRenderer.registerViewFactory('$viewId', function(viewId) {
-            return img;
-          });
-        }
-      """]);
+      ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+        final img = html.ImageElement()
+          ..src = url
+          ..style.objectFit = 'cover'
+          ..style.width = '100%'
+          ..style.height = '100%';
+        return img;
+      });
     }
 
     return HtmlElementView(
