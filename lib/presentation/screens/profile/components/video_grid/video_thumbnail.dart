@@ -8,6 +8,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:html' as html;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:ui' as ui;
+// Add this line for web platform registry
+import 'package:flutter/foundation.dart' show kIsWeb;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:ui_web' as ui_web if (dart.library.html) '';
 
 class VideoThumbnail extends StatelessWidget {
   // Add static set to track registered views
@@ -114,8 +118,9 @@ class VideoThumbnail extends StatelessWidget {
     
     if (kIsWeb && !_registeredViews.contains(viewId)) {
       print('📝 Registering new view factory');
+      // Update this line to use the correct registry access
       // ignore: undefined_prefixed_name
-      ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+      ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
         print('🏭 Creating image element for viewId: $viewId');
         final container = html.DivElement()
           ..style.width = '100%'
