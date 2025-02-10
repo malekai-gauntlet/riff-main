@@ -498,6 +498,10 @@ class _VideoItemState extends State<_VideoItem> with SingleTickerProviderStateMi
         ),
       );
       
+      // Always start muted
+      print('🔇 Setting initial muted state for autoplay');
+      await _controller?.setVolume(0.0);
+
       final initStartTime = DateTime.now();
       print('🔄 Initializing controller...');
       print('⏰ Init start time: ${initStartTime.toString()}');
@@ -570,7 +574,8 @@ class _VideoItemState extends State<_VideoItem> with SingleTickerProviderStateMi
         if (mounted) {
           setState(() => _isInitialized = true);
           if (widget.isVisible && _controller != null) {
-            print('✅ Video ready for playback - tap to play');
+            print('▶️ Starting autoplay');
+            _controller?.play();
             // Start fade in animation when video is ready
             _fadeController.forward(from: 0.0);
           }

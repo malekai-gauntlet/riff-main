@@ -247,6 +247,23 @@ class _VideoActionButtonsState extends State<VideoActionButtons> {
               },
             ),
           ),
+          // Mute toggle button
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: _ActionButton(
+              icon: Icon(
+                widget.controller?.value.volume == 0 ? Icons.volume_off : Icons.volume_up,
+                color: Colors.white,
+                size: 28,
+              ),
+              label: '',
+              onTap: () async {
+                final isMuted = widget.controller?.value.volume == 0;
+                await widget.controller?.setVolume(isMuted ? 1.0 : 0.0);
+                setState(() {}); // Trigger rebuild to update icon
+              },
+            ),
+          ),
           // Tutorial Button
           _ActionButton(
             icon: Container(
