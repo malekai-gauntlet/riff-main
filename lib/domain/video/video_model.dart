@@ -14,6 +14,7 @@ class Video with _$Video {
     required String title,
     required String description,
     required String creatorId,
+    String? artist,
     @Default(0) int viewCount,
     @Default(0) int likeCount,
     @Default(0) int playCount,

@@ -5,10 +5,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/profile/profile_view_screen.dart';
 import 'presentation/screens/feed/feed_screen.dart';
+import 'presentation/screens/tab/tab_view_screen.dart';
 import 'presentation/widgets/navigation/bottom_nav_bar.dart';
 import 'presentation/widgets/navigation/feed_toggle.dart';
 import 'presentation/widgets/video/video_action_buttons.dart';
 import 'auth/infrastructure/auth_repository.dart';
+import 'domain/video/video_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -117,13 +119,196 @@ class _HomePageState extends State<HomePage> {
       case 3: // Profile (was previously 4)
         return const ProfileViewScreen();
       default:
-        return const Center(
-          child: Text(
-            'Coming Soon!',
-            style: TextStyle(color: Colors.white),
-          ),
+        return Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 20,
+                left: 20,
+                right: 20,
+                bottom: 20,
+              ),
+              child: const Text(
+                'My Tabs',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  _buildTabCard(
+                    title: 'Stairway to Heaven',
+                    artist: 'Led Zeppelin',
+                    difficulty: 'Intermediate',
+                    lastModified: '2 days ago',
+                  ),
+                  _buildTabCard(
+                    title: 'Smoke on the Water',
+                    artist: 'Deep Purple',
+                    difficulty: 'Beginner',
+                    lastModified: '1 week ago',
+                  ),
+                  _buildTabCard(
+                    title: 'Iron Man',
+                    artist: 'Black Sabbath',
+                    difficulty: 'Intermediate',
+                    lastModified: '3 days ago',
+                  ),
+                  _buildTabCard(
+                    title: 'Sweet Child O\' Mine',
+                    artist: 'Guns N\' Roses',
+                    difficulty: 'Advanced',
+                    lastModified: '5 days ago',
+                  ),
+                  _buildTabCard(
+                    title: 'Nothing Else Matters',
+                    artist: 'Metallica',
+                    difficulty: 'Intermediate',
+                    lastModified: 'Just now',
+                  ),
+                ],
+              ),
+            ),
+          ],
         );
     }
+  }
+
+  // Helper method to build a tab card
+  Widget _buildTabCard({
+    required String title,
+    required String artist,
+    required String difficulty,
+    required String lastModified,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            // Create a temporary video object for the tab
+            final video = Video(
+              id: title.toLowerCase().replaceAll(' ', '-'),
+              title: title,
+              artist: artist,
+              description: 'Guitar tab for $title by $artist',
+              url: '', // No video URL needed for static tabs
+              thumbnailUrl: null,
+              creatorId: 'system', // System generated tabs
+              createdAt: DateTime.now(),
+              likeCount: 0,
+              tags: ['tab'],
+              likedByUsers: [],
+              savedByUsers: [],
+              tutorials: [],
+            );
+
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => TabViewScreen(
+                  video: video,
+                ),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Guitar Icon with background
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.music_note,
+                    color: Colors.white.withOpacity(0.9),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Tab Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        artist,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              difficulty,
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            lastModified,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.5),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Arrow Icon
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white.withOpacity(0.5),
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override

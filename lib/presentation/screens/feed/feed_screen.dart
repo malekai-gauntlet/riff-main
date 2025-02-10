@@ -13,6 +13,7 @@ import '../../../domain/video/electric_video_sequence.dart';
 import '../../physics/one_page_scroll_physics.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cached_network_image/cached_network_image.dart';
+import '../tab/tab_view_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   // Add static boolean to track if tooltip has been shown
@@ -719,6 +720,58 @@ class _VideoItemState extends State<_VideoItem> with SingleTickerProviderStateMi
                   Icons.play_arrow,
                   size: 64,
                   color: Colors.white.withOpacity(0.8),
+                ),
+              ),
+            ),
+          ),
+
+          // Tab Button (bottom left)
+          Positioned(
+            left: 16,
+            bottom: 90, // Position above the title/description
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => TabViewScreen(
+                          video: widget.video,
+                        ),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.music_note,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'View Tab',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
