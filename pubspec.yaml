@@ -62,6 +62,7 @@ dependencies:
   # Added from the code block
   connectivity_plus: ^5.0.2  # For network connectivity checking
   flutter_cache_manager: ^3.4.1
+  shared_preferences: ^2.5.1
 
 dev_dependencies:
   flutter_test:

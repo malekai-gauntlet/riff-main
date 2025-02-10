@@ -15,6 +15,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cached_network_image/cached_network_image.dart';
 
 class FeedScreen extends StatefulWidget {
+  // Add static boolean to track if tooltip has been shown
+  static bool hasShownUnmuteTooltip = false;
+  
   final int selectedGenre;
   
   const FeedScreen({
@@ -283,7 +286,8 @@ class _FeedScreenState extends State<FeedScreen> {
                     }
                   },
                   shouldPreload: false,
-                  isInActiveWindow: index == _currentPage, // Only current video active
+                  isInActiveWindow: index == _currentPage,
+                  index: index,
                 );
               },
             ),
@@ -333,6 +337,7 @@ class _VideoItem extends StatefulWidget {
   final bool shouldPreload;
   final bool isInActiveWindow;
   final GlobalKey<_VideoItemState> key;
+  final int index;
 
   const _VideoItem({
     required this.video,
@@ -341,6 +346,7 @@ class _VideoItem extends StatefulWidget {
     this.shouldPreload = false,
     this.isInActiveWindow = false,
     required this.key,
+    required this.index,
   });
 
   @override
@@ -352,6 +358,7 @@ class _VideoItemState extends State<_VideoItem> with SingleTickerProviderStateMi
   VideoPlayerController? _controller;
   bool _isInitialized = false;
   late AnimationController _fadeController;
+  bool _showUnmuteHint = false;
   
   // Add public getter
   bool get isInitialized => _isInitialized;
@@ -554,6 +561,12 @@ class _VideoItemState extends State<_VideoItem> with SingleTickerProviderStateMi
           if (!mounted) return;
           
           final value = _controller!.value;
+          
+          // Hide unmute hint if volume is not 0
+          if (value.volume > 0 && _showUnmuteHint) {
+            setState(() => _showUnmuteHint = false);
+          }
+          
           if (value.hasError) {
             print('🚨 Playback error detected:');
             print('   - Error: ${value.errorDescription}');
@@ -578,6 +591,37 @@ class _VideoItemState extends State<_VideoItem> with SingleTickerProviderStateMi
             _controller?.play();
             // Start fade in animation when video is ready
             _fadeController.forward(from: 0.0);
+            
+            // Only show tooltip for first video and if we haven't shown it yet
+            if (!FeedScreen.hasShownUnmuteTooltip && widget.index == 0) {
+              // Check after 2 seconds if video is playing but muted
+              Future.delayed(const Duration(seconds: 3), () {
+                print('🔊 Checking mute state:');
+                print('   - Is mounted: $mounted');
+                print('   - Is playing: ${_controller?.value.isPlaying}');
+                print('   - Volume: ${_controller?.value.volume}');
+                
+                if (mounted && _controller?.value.isPlaying == true && _controller?.value.volume == 0) {
+                  print('✨ Showing unmute hint');
+                  setState(() => _showUnmuteHint = true);
+                  // Mark tooltip as shown
+                  FeedScreen.hasShownUnmuteTooltip = true;
+                  
+                  // Hide after 5 seconds
+                  Future.delayed(const Duration(seconds: 6), () {
+                    if (mounted) {
+                      print('🔇 Hiding unmute hint');
+                      setState(() => _showUnmuteHint = false);
+                    }
+                  });
+                } else {
+                  print('❌ Conditions not met for unmute hint:');
+                  print('   - Mounted: $mounted');
+                  print('   - Playing: ${_controller?.value.isPlaying}');
+                  print('   - Volume: ${_controller?.value.volume}');
+                }
+              });
+            }
           }
         }
       } catch (initError) {
@@ -680,13 +724,44 @@ class _VideoItemState extends State<_VideoItem> with SingleTickerProviderStateMi
             ),
           ),
             
+          // Unmute hint tooltip - moved out of action buttons Stack
+          Positioned(
+            right: 60, // Position to the left of action buttons
+            bottom: 150, // Position above the action buttons
+            child: AnimatedOpacity(
+              opacity: _showUnmuteHint ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Unmute',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 24),
+                  ],
+                ),
+              ),
+            ),
+          ),
           // Action buttons (right side)
           Positioned(
             right: 8,
             bottom: 0,
-            child: VideoActionButtons(
-              video: widget.video,
-              controller: _controller,
+            child: Stack(
+              children: [
+                VideoActionButtons(
+                  video: widget.video,
+                  controller: _controller,
+                ),
+              ],
             ),
           ),
             
