@@ -34,7 +34,13 @@ class _ProfileVideoGridState extends State<ProfileVideoGrid> {
   // Load saved videos for current user
   Future<void> _loadSavedVideos() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    print('\n🔍 Loading Saved Videos:');
+    print('👤 User ID: $userId');
+    
+    if (userId == null) {
+      print('❌ No user ID available - user might not be logged in');
+      return;
+    }
     
     setState(() {
       _isLoading = true;
@@ -42,12 +48,27 @@ class _ProfileVideoGridState extends State<ProfileVideoGrid> {
     });
     
     try {
+      print('📥 Fetching saved videos from repository...');
       final videos = await _videoRepository.getSavedVideos(userId);
+      print('✅ Fetch complete:');
+      print('📊 Number of videos: ${videos.length}');
+      if (videos.isNotEmpty) {
+        print('🖼️ First video details:');
+        print('   - ID: ${videos[0].id}');
+        print('   - Title: ${videos[0].title}');
+        print('   - Thumbnail URL: ${videos[0].thumbnailUrl}');
+      }
+      
       setState(() {
         _savedVideos = videos;
         _isLoading = false;
       });
-    } catch (e) {
+      print('💾 State updated with ${_savedVideos.length} videos');
+      
+    } catch (e, stackTrace) {
+      print('❌ Error loading saved videos:');
+      print('   Error: $e');
+      print('   Stack trace: $stackTrace');
       setState(() {
         _error = 'Failed to load saved videos';
         _isLoading = false;
@@ -81,11 +102,18 @@ class _ProfileVideoGridState extends State<ProfileVideoGrid> {
   }
   
   Widget _buildSavedRecordingsGrid() {
+    print('\n🎯 Building Saved Recordings Grid:');
+    print('📊 Loading state: $_isLoading');
+    print('❌ Error state: $_error');
+    print('🎥 Number of videos: ${_savedVideos.length}');
+    
     if (_isLoading) {
+      print('⏳ Showing loading indicator');
       return const Center(child: CircularProgressIndicator());
     }
     
     if (_error != null) {
+      print('❌ Showing error state: $_error');
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -102,6 +130,7 @@ class _ProfileVideoGridState extends State<ProfileVideoGrid> {
     }
     
     if (_savedVideos.isEmpty) {
+      print('📭 No saved videos to display');
       return const Center(
         child: Text(
           'No saved videos yet',
@@ -110,6 +139,7 @@ class _ProfileVideoGridState extends State<ProfileVideoGrid> {
       );
     }
     
+    print('🎬 Building grid with ${_savedVideos.length} videos');
     return RefreshIndicator(
       onRefresh: _loadSavedVideos,
       child: GridView.builder(
@@ -127,12 +157,18 @@ class _ProfileVideoGridState extends State<ProfileVideoGrid> {
             thumbnailUrl: video.thumbnailUrl,
             likeCount: video.likeCount,
             onTap: () {
-              print('Grid item tapped! Video ID: ${video.id}'); // Debug print
-              // Navigate to SavedVideoViewScreen
+              print('\n🎯 Grid Item Tapped:');
+              print('📺 Video ID: ${video.id}');
+              print('📝 Video Title: ${video.title}');
+              print('🔢 Index: $index');
+              print('📱 Starting navigation to SavedVideoViewScreen...');
+              
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) {
-                    print('Building SavedVideoViewScreen...'); // Debug print
+                    print('🏗️ Building SavedVideoViewScreen:');
+                    print('🎥 Initial Video: ${video.id}');
+                    print('📊 Total Videos: ${_savedVideos.length}');
                     return SavedVideoViewScreen(
                       initialVideo: video,
                       savedVideos: _savedVideos,
@@ -140,7 +176,9 @@ class _ProfileVideoGridState extends State<ProfileVideoGrid> {
                     );
                   },
                 ),
-              );
+              ).then((_) {
+                print('↩️ Returned from SavedVideoViewScreen');
+              });
             },
           );
         },

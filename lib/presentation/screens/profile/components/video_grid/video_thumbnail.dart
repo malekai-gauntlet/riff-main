@@ -8,9 +8,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:html' as html;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:ui' as ui;
-import 'dart:js' as js;
 
 class VideoThumbnail extends StatelessWidget {
+  // Add static set to track registered views
+  static final Set<String> _registeredViews = {};
+  
   // Properties for the video thumbnail
   final String? thumbnailUrl; // URL for the video thumbnail image
   final int likeCount; // Number of likes to display
@@ -27,7 +29,9 @@ class VideoThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        print('VideoThumbnail tapped!'); // Debug print
+        print('\n👆 Main Thumbnail Tap:');
+        print('🖼️ Thumbnail URL: $thumbnailUrl');
+        print('💻 Platform: ${kIsWeb ? 'Web' : 'Mobile'}');
         onTap();
       },
       behavior: HitTestBehavior.opaque, // Make entire area tappable
@@ -50,16 +54,13 @@ class VideoThumbnail extends StatelessWidget {
                     ),
                   ),
                 ),
-                errorWidget: (context, url, error) {
-                  print('Error loading thumbnail on mobile: $error');
-                  return Container(
-                    color: Colors.grey[300],
-                    child: const Icon(
-                      Icons.error_outline,
-                      color: Colors.grey,
-                    ),
-                  );
-                },
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[300],
+                  child: const Icon(
+                    Icons.error_outline,
+                    color: Colors.grey,
+                  ),
+                ),
               )
           else
             Container(
@@ -107,40 +108,47 @@ class VideoThumbnail extends StatelessWidget {
 
   Widget _buildWebImage(String url) {
     final String viewId = 'thumbnail-${url.hashCode}';
+    print('\n🌐 Building Web Image:');
+    print('🔑 View ID: $viewId');
+    print('🔗 URL: $url');
     
-    // Register the factory for web platform
-    if (kIsWeb) {
+    if (kIsWeb && !_registeredViews.contains(viewId)) {
+      print('📝 Registering new view factory');
       // ignore: undefined_prefixed_name
-      js.context.callMethod('eval', ["""
-        if (!window.registeredViews) {
-          window.registeredViews = {};
-        }
-        if (!window.registeredViews['$viewId']) {
-          window.registeredViews['$viewId'] = true;
-          var img = document.createElement('img');
-          img.src = '$url';
-          img.style.objectFit = 'cover';
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.cursor = 'pointer';
-          // Register view factory
-          window.flutter_inappwebview?.callHandler('newPlatformView', '$viewId', function(viewId) {
-            return img;
-          });
-        }
-      """]);
+      ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+        print('🏭 Creating image element for viewId: $viewId');
+        final container = html.DivElement()
+          ..style.width = '100%'
+          ..style.height = '100%'
+          ..style.cursor = 'pointer';
+          
+        final img = html.ImageElement()
+          ..src = url
+          ..style.objectFit = 'cover'
+          ..style.width = '100%'
+          ..style.height = '100%';
+          
+        container.append(img);
+        
+        // Add click handler to the container
+        container.onClick.listen((event) {
+          print('\n👆 Web Image Clicked:');
+          print('🖼️ Thumbnail URL: $url');
+          onTap();
+        });
+        
+        return container;
+      });
+      _registeredViews.add(viewId);
+      print('✅ View registered successfully');
+    } else {
+      print('ℹ️ View already registered');
     }
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          print('Web thumbnail tapped!');
-          onTap();
-        },
-        child: HtmlElementView(
-          viewType: viewId,
-        ),
+      child: HtmlElementView(
+        viewType: viewId,
       ),
     );
   }
