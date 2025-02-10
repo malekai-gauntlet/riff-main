@@ -52,67 +52,76 @@ class TutorialScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: CustomScrollView(
-                slivers: [
-                  // Header
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            video.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            video.description,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 15,
-                              height: 1.3,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  if (bestTutorial != null) ...[
-                    // Main Tutorial Section
+        child: GestureDetector(
+          onHorizontalDragEnd: (details) {
+            if (details.primaryVelocity! > 0) { // Swiping right
+              onClose?.call();
+              Navigator.of(context).pop();
+            }
+          },
+          child: Column(
+            children: [
+              Expanded(
+                child: CustomScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  slivers: [
+                    // Header
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                        child: _TutorialSection(tutorial: bestTutorial),
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              video.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              video.description,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.7),
+                                fontSize: 15,
+                                height: 1.3,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
                       ),
                     ),
+
+                    if (bestTutorial != null) ...[
+                      // Main Tutorial Section
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                          child: _TutorialSection(tutorial: bestTutorial),
+                        ),
+                      ),
+                    ],
+
+                    // Add extra space at the bottom
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: 32),
+                    ),
                   ],
-
-                  // Add extra space at the bottom
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: 32),
-                  ),
-                ],
+                ),
               ),
-            ),
 
-            // Guitar Notes Section - Fixed at bottom
-            if (bestTutorial != null && bestTutorial.guitarNotes.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: _GuitarNotesSection(guitarNotes: bestTutorial.guitarNotes),
-              ),
-          ],
+              // Guitar Notes Section - Fixed at bottom
+              if (bestTutorial != null && bestTutorial.guitarNotes.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: _GuitarNotesSection(guitarNotes: bestTutorial.guitarNotes),
+                ),
+            ],
+          ),
         ),
       ),
     );

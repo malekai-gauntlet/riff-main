@@ -347,10 +347,11 @@ class _VideoItem extends StatefulWidget {
   State<_VideoItem> createState() => _VideoItemState();
 }
 
-class _VideoItemState extends State<_VideoItem> {
+class _VideoItemState extends State<_VideoItem> with SingleTickerProviderStateMixin {
   // Change from late to nullable
   VideoPlayerController? _controller;
   bool _isInitialized = false;
+  late AnimationController _fadeController;
   
   // Add public getter
   bool get isInitialized => _isInitialized;
@@ -396,6 +397,11 @@ class _VideoItemState extends State<_VideoItem> {
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    
     print('\n🎥 VideoItem initState:');
     print('📺 Video ID: ${widget.video.id}');
     print('👁️ Is in active window: ${widget.isInActiveWindow}');
@@ -438,9 +444,7 @@ class _VideoItemState extends State<_VideoItem> {
     
     if (oldWidget.isVisible != widget.isVisible) {
       widget.onVisibilityChanged(widget.isVisible);
-      if (widget.isVisible && _isInitialized) {
-        _controller?.play();
-      } else if (_isInitialized) {
+      if (!widget.isVisible && _isInitialized) {
         _controller?.pause();
       }
     }
@@ -464,6 +468,7 @@ class _VideoItemState extends State<_VideoItem> {
 
   @override
   void dispose() {
+    _fadeController.dispose();
     disposeController();
     super.dispose();
   }
@@ -566,16 +571,8 @@ class _VideoItemState extends State<_VideoItem> {
           setState(() => _isInitialized = true);
           if (widget.isVisible && _controller != null) {
             print('✅ Video ready for playback - tap to play');
-            // Autoplay code - commented out for mobile browser compatibility
-            // print('▶️ Starting playback...');
-            // await _controller!.play();
-            // // Verify playback actually started
-            // if (_controller!.value.isPlaying) {
-            //   print('✅ Playback confirmed started');
-            // } else {
-            //   print('⚠️ Playback may not have started properly');
-            //   _retryPlayback();
-            // }
+            // Start fade in animation when video is ready
+            _fadeController.forward(from: 0.0);
           }
         }
       } catch (initError) {
@@ -641,20 +638,26 @@ class _VideoItemState extends State<_VideoItem> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Always show thumbnail first
-          if (widget.video.thumbnailUrl != null)
-            CachedNetworkImage(
-              imageUrl: widget.video.thumbnailUrl!,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: Colors.black),
-              errorWidget: (context, url, error) => Container(color: Colors.black),
-            )
-          else
-            Container(color: Colors.black),
+          // Always show black background
+          Container(color: Colors.black),
+
+          // Thumbnail code commented out for testing
+          // if (widget.video.thumbnailUrl != null)
+          //   CachedNetworkImage(
+          //     imageUrl: widget.video.thumbnailUrl!,
+          //     fit: BoxFit.cover,
+          //     placeholder: (context, url) => Container(color: Colors.black),
+          //     errorWidget: (context, url, error) => Container(color: Colors.black),
+          //   )
+          // else
+          //   Container(color: Colors.black),
 
           // Show video player on top when ready
           if (widget.isVisible && _isInitialized && _controller != null)
-            VideoPlayer(_controller!),
+            FadeTransition(
+              opacity: _fadeController,
+              child: VideoPlayer(_controller!),
+            ),
             
           // Always show play button until video starts
           AnimatedOpacity(

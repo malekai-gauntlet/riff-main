@@ -45,6 +45,13 @@ class MyApp extends StatelessWidget {
           secondary: const Color(0xFFFF8A65), // Warm orange as accent
         ),
         useMaterial3: true,
+        // Add custom page transitions
+        pageTransitionsTheme: PageTransitionsTheme(
+          builders: {
+            for (final platform in TargetPlatform.values)
+              platform: const CustomPageTransitionsBuilder(),
+          },
+        ),
       ),
       home: const AuthWrapper(),
     );
@@ -129,6 +136,33 @@ class _HomePageState extends State<HomePage> {
         selectedIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
       ),
+    );
+  }
+}
+
+// Add custom page transitions builder
+class CustomPageTransitionsBuilder extends PageTransitionsBuilder {
+  const CustomPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    const begin = Offset(1.0, 0.0);
+    const end = Offset.zero;
+    const curve = Curves.easeInOutCubic;
+    const duration = Duration(milliseconds: 500);
+
+    var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+    var offsetAnimation = animation.drive(tween);
+
+    return SlideTransition(
+      position: offsetAnimation,
+      child: child,
     );
   }
 }
