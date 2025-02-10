@@ -9,7 +9,13 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:html' as html;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
+
+// Add this if running on web
+// ignore: avoid_web_libraries_in_flutter
 import 'dart:js' as js;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:ui_web' as ui_web;
 
 class TutorialScreen extends StatelessWidget {
   final Video video;
@@ -152,7 +158,7 @@ class _TutorialCard extends StatelessWidget {
     
     if (kIsWeb) {
       // ignore: undefined_prefixed_name
-      ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+      ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
         final img = html.ImageElement()
           ..src = url
           ..style.objectFit = 'cover'
