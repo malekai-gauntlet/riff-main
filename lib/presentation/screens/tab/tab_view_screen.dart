@@ -1,29 +1,34 @@
 import 'package:flutter/material.dart';
-import '../../../domain/video/video_model.dart';
-import '../../../domain/tab/tab_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:intl/intl.dart';
 import '../../../domain/tab/tab_template.dart';
+import '../../../domain/tab/tab_repository.dart';
 import '../../../domain/tab/tab_renderer.dart';
+import '../../../domain/video/video_model.dart';
 
-class TabViewScreen extends StatefulWidget {
+// Add provider definition
+final tabRepositoryProvider = Provider((ref) => TabRepository());
+
+class TabViewScreen extends ConsumerStatefulWidget {
   final Video video;
+  final bool isStaticTab;
 
   const TabViewScreen({
-    super.key,
+    Key? key,
     required this.video,
-  });
+    this.isStaticTab = false,
+  }) : super(key: key);
 
   @override
-  State<TabViewScreen> createState() => _TabViewScreenState();
+  ConsumerState<TabViewScreen> createState() => _TabViewScreenState();
 }
 
-class _TabViewScreenState extends State<TabViewScreen> {
-  // Repository instance
-  final TabRepository _tabRepository = TabRepository();
-  
-  // Loading state
+class _TabViewScreenState extends ConsumerState<TabViewScreen> {
+  TabTemplate? _tab;
   bool _isLoading = true;
   String? _error;
-  TabTemplate? _tab;
+  double _autoScrollSpeed = 0.0;
 
   @override
   void initState() {
@@ -31,7 +36,6 @@ class _TabViewScreenState extends State<TabViewScreen> {
     _loadTab();
   }
 
-  // Load or generate tab for the video
   Future<void> _loadTab() async {
     try {
       setState(() {
@@ -39,158 +43,267 @@ class _TabViewScreenState extends State<TabViewScreen> {
         _error = null;
       });
 
-      final tab = await _tabRepository.getTabForVideo(widget.video);
+      final tabRepository = ref.read(tabRepositoryProvider);
+      final tab = await tabRepository.getTabForVideo(widget.video);
       
-      if (mounted) {
+      if (tab == null) {
         setState(() {
-          _tab = tab;
+          _error = 'No tab found for this video';
           _isLoading = false;
         });
+        return;
       }
+      
+      setState(() {
+        _tab = tab;
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = 'Failed to load tab: $e';
-          _isLoading = false;
-        });
-      }
+      print('Error loading tab: $e'); // Debug print
+      setState(() {
+        _error = 'Failed to load tab: $e';
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.4),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.arrow_back, color: Colors.white),
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          widget.video.title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
+                : _buildBody(),
       ),
-      body: _buildBody(),
     );
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.white),
-            SizedBox(height: 16),
-            Text(
-              'Generating Tab...',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    if (_tab == null) return const SizedBox.shrink();
 
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _error!,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
-              textAlign: TextAlign.center,
+    return Column(
+      children: [
+        // Header with back button and title
+        _buildHeader(),
+        
+        // Metadata section
+        _buildMetadataSection(),
+        
+        // Action buttons
+        _buildActionButtons(),
+        
+        // Tab content
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Tuning information
+                if (!_isStandardTuning(_tab!.songInfo.tuning))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Tuning',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _tab!.songInfo.tuning.join(' '),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontFamily: 'Courier',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                
+                // Tab content
+                Text(
+                  (() {
+                    print('\n📝 About to render tab...');
+                    final renderedTab = TabRenderer.renderTab(_tab!);
+                    print('📝 Rendered tab result:');
+                    print(renderedTab);
+                    return renderedTab;
+                  })(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontFamily: 'Courier',
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadTab,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_tab == null) {
-      return const Center(
-        child: Text(
-          'No tab available',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
           ),
         ),
-      );
-    }
+      ],
+    );
+  }
 
-    // Display the tab in a scrollable monospace font
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Tab metadata
-            Text(
-              '${_tab!.songInfo.title} - ${_tab!.songInfo.artist}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Difficulty: ${_tab!.songInfo.difficulty}',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Tab content in monospace font
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.all(16),
-              child: SelectableText(
-                _tab!.toVisualTab(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontFamily: 'monospace',
-                  fontSize: 14,
-                  height: 1.5,
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        border: Border(bottom: BorderSide(color: Colors.grey[800]!)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _tab!.songInfo.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
+                Text(
+                  _tab!.songInfo.artist,
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildMetadataSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        border: Border(bottom: BorderSide(color: Colors.grey[800]!)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildMetadataItem('Difficulty', _tab!.songInfo.difficulty),
+          _buildMetadataItem('Key', _tab!.meta.key),
+          _buildMetadataItem(
+            'Created',
+            DateFormat('MMM d, yyyy').format(DateTime.now()), // Temporary until we add metadata
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetadataItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey[400],
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        border: Border(bottom: BorderSide(color: Colors.grey[800]!)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildActionButton(
+            icon: FontAwesomeIcons.play,
+            label: 'Auto Scroll',
+            onPressed: () {
+              // TODO: Implement auto scroll
+            },
+          ),
+          _buildActionButton(
+            icon: FontAwesomeIcons.music,
+            label: 'Listen',
+            onPressed: () {
+              // TODO: Implement listen feature
+            },
+          ),
+          _buildActionButton(
+            icon: FontAwesomeIcons.filePdf,
+            label: 'PDF',
+            onPressed: () {
+              // TODO: Implement PDF download
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 20),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isStandardTuning(List<String> tuning) {
+    const standardTuning = ['E', 'A', 'D', 'G', 'B', 'E'];
+    if (tuning.length != standardTuning.length) return false;
+    for (int i = 0; i < tuning.length; i++) {
+      if (tuning[i] != standardTuning[i]) return false;
+    }
+    return true;
   }
 } 

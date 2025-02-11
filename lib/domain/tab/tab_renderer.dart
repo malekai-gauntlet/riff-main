@@ -4,6 +4,10 @@ import 'tab_template.dart';
 class TabRenderer {
   /// Converts a tab template to visual string format
   static String renderTab(TabTemplate template) {
+    print('\n🎸🎸🎸 STARTING TAB RENDER 🎸🎸🎸');
+    print('Title: ${template.songInfo.title}');
+    print('Content: ${template.content}');
+    
     final buffer = StringBuffer();
     
     // Add title and metadata
@@ -42,6 +46,9 @@ class TabRenderer {
 
   /// Renders a single measure in visual format
   static String _renderMeasure(Measure measure) {
+    print('\n🎸 Rendering measure:');
+    print('📊 Measure data: $measure');
+    
     final stringBuffers = {
       1: StringBuffer('e|'),
       2: StringBuffer('B|'),
@@ -53,16 +60,21 @@ class TabRenderer {
     
     // Initialize with dashes
     final measureWidth = _calculateMeasureWidth(measure);
+    print('📏 Measure width: $measureWidth');
+    
     for (var string = 1; string <= 6; string++) {
       stringBuffers[string]!.write('-' * measureWidth);
     }
     
     // Place notes in correct positions
     for (var tabString in measure.strings) {
+      print('🎵 Processing string ${tabString.string}:');
       final buffer = stringBuffers[tabString.string]!;
       for (var note in tabString.notes) {
         final position = _calculateVisualPosition(note.position, measureWidth);
+        print('  - Note: fret ${note.fret} at position $position');
         _placeNote(buffer, note.fret, position);
+        print('  - Buffer after placing note: ${buffer.toString()}');
       }
     }
     
@@ -77,34 +89,52 @@ class TabRenderer {
       result.writeln(stringBuffers[string]!.toString());
     }
     
+    print('📝 Final rendered measure:');
+    print(result.toString());
     return result.toString();
   }
 
   /// Places a note in the string buffer at the correct position
   static void _placeNote(StringBuffer buffer, int fret, int position) {
     final fretStr = fret.toString();
-    final length = fretStr.length;
+    print('  - Placing note $fretStr at position $position');
+    print('  - Buffer before: ${buffer.toString()}');
     
-    // Replace dashes with fret number
-    buffer.toString().replaceRange(
+    // Get current content
+    final content = buffer.toString();
+    
+    // Clear the buffer
+    buffer.clear();
+    
+    // Write the updated content
+    final newContent = content.replaceRange(
       position,
-      position + length,
+      position + 1, // Replace just one character
       fretStr,
     );
+    buffer.write(newContent);
+    
+    print('  - Buffer after: ${buffer.toString()}');
   }
 
   /// Calculates the visual position for a note
   static int _calculateVisualPosition(int position, int measureWidth) {
-    // Convert musical position to visual position
-    // This will need tuning based on your timing requirements
-    return 1 + ((position * (measureWidth - 2)) ~/ 8);
+    // Add 1 to account for the | at the start
+    return position + 1;
   }
 
   /// Calculates the width needed for a measure
   static int _calculateMeasureWidth(Measure measure) {
-    // Default width for 4/4 measure
-    // This will need tuning based on your requirements
-    return 20;
+    // Find the rightmost note position
+    var maxPosition = 0;
+    for (var string in measure.strings) {
+      for (var note in string.notes) {
+        maxPosition = maxPosition > note.position ? maxPosition : note.position;
+      }
+    }
+    
+    // Add some padding and account for measure bars
+    return maxPosition + 4;
   }
 
   /// Determines section name based on measure index

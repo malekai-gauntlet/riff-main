@@ -218,6 +218,7 @@ class _HomePageState extends State<HomePage> {
               MaterialPageRoute(
                 builder: (context) => TabViewScreen(
                   video: video,
+                  isStaticTab: true, // Add this flag to indicate it's a static tab
                 ),
               ),
             );

@@ -36,7 +36,7 @@ class RiffBottomNavBar extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(Icons.library_music_outlined),
           activeIcon: Icon(Icons.library_music),
-          label: 'Tutorials',
+          label: 'Tabs',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),

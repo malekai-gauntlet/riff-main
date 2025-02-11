@@ -1,139 +1,141 @@
 # AI Tab Generation Feature - MVP Roadmap (v2)
 
 ## Overview
-This document outlines the revised implementation plan for AI-powered guitar tab generation, utilizing Ultimate Guitar's JSON structure as a template for output formatting. The MVP will focus on single-note melodies only, with plans to expand functionality in future iterations.
+This document outlines the revised implementation plan for AI-powered guitar tab generation, focusing on a progressive, UI-first approach with incremental feature additions. The MVP will start with static tab support and gradually incorporate AI features.
 
-## Phase 0: Template Analysis & Setup
-- [ ] **Ultimate Guitar JSON Analysis**
-  - [ ] Research Ultimate Guitar tab structure
-  - [ ] Document JSON schema
-  - [ ] Create sample templates for different tab types
-  - [ ] Identify required fields and formats
-  - [ ] Create validation rules for JSON structure
+## Phase 0: Basic Infrastructure
+- [x] **Template Structure**
+  - [x] Define Ultimate Guitar compatible JSON schema
+  - [x] Create tab template models
+  - [x] Implement template validation
+  - [x] Document template format
 
-- [ ] **Template Database Setup**
-  - [ ] Create collection of example tab JSONs
-  - [ ] Implement template storage system
-  - [ ] Create template selection logic
-  - [ ] Add template validation
-  - [ ] Document template usage guidelines
+- [x] **Basic UI Foundation**
+  - [x] Implement tab view screen
+  - [x] Add tab button to video interface
+  - [x] Create basic tab rendering
+  - [x] Set up navigation flow
 
-## Phase 1: Audio Recording Infrastructure
-- [ ] **Audio Recording Setup**
-  - [ ] Add audio recording permissions to app manifest
-  - [ ] Implement audio recording service
-  - [ ] Create recording controls UI
-  - [ ] Add recording indicator and visualization
-  - [ ] Implement proper audio file management
+- [ ] **Firebase Setup**
+  - [x] Basic Firebase integration
+  - [x] Create ai_tabs collection
+  - [x] Define document structure
+  - [ ] Configure security rules for ai_tabs collection (NEXT)
+  - [ ] Implement basic error handling
+  - [ ] Add logging and monitoring
 
-- [ ] **Audio Processing**
-  - [ ] Set up audio format conversion (WAV/MP3)
-  - [ ] Implement basic noise reduction
-  - [ ] Add audio normalization
-  - [ ] Create audio chunking system for processing
-  - [ ] Set up audio caching system
+## Phase 1: Static Tab Support
+- [x] **Tab View Implementation**
+  - [x] Create tab viewing interface
+  - [x] Implement monospace formatting
+  - [x] Add horizontal/vertical scrolling
+  - [x] Support different tab sections
 
-## Phase 2: Note Detection & Mapping
-- [ ] **Pitch Detection Implementation**
-  - [ ] Research and select pitch detection algorithm
-  - [ ] Implement basic frequency-to-note conversion
-  - [ ] Add note timing detection
-  - [ ] Map detected notes to Ultimate Guitar format
-  - [ ] Implement confidence scoring for detected notes
+- [ ] **Tab Storage**
+  - [ ] Implement tab saving to Firestore
+  - [ ] Add tab metadata handling
+  - [ ] Create tab indexing system
+  - [ ] Set up tab versioning
 
-- [ ] **Audio Analysis Service**
-  - [ ] Create service for processing audio files
-  - [ ] Implement note detection pipeline
-  - [ ] Map detected notes to tab positions
-  - [ ] Create test suite for note detection
-  - [ ] Add logging and debugging tools
+- [ ] **Tab Management**
+  - [ ] Add tab listing interface
+  - [ ] Implement tab search/filtering
+  - [ ] Add sorting options
+  - [ ] Create tab categories
 
-## Phase 3: Tab Generation Using Templates
-- [ ] **Template-Based Generation**
-  - [ ] Implement template selection logic
-  - [ ] Create note-to-template mapping
-  - [ ] Add basic position suggestions
-  - [ ] Implement template filling logic
-  - [ ] Add validation against template schema
+## Phase 2: User Interaction
+- [ ] **User Features**
+  - [ ] Implement tab saving/favoriting
+  - [ ] Add tab sharing functionality
+  - [ ] Set up user permissions
+  - [ ] Create user tab collections
 
-- [ ] **Tab Output Generation**
-  - [ ] Create JSON output formatter
-  - [ ] Implement template merging
-  - [ ] Add metadata handling
-  - [ ] Create export functionality
-  - [ ] Implement version control
+- [ ] **Tab Editing**
+  - [ ] Build basic tab editor
+  - [ ] Add note input interface
+  - [ ] Implement measure management
+  - [ ] Add chord insertion tools
 
-## Phase 4: UI Implementation
-- [ ] **Recording Interface**
-  - [ ] Design recording screen
-  - [ ] Add recording button and controls
-  - [ ] Implement audio level visualization
-  - [ ] Add recording timer
-  - [ ] Create loading/processing indicators
+- [ ] **Version Control**
+  - [ ] Track tab edit history
+  - [ ] Implement undo/redo
+  - [ ] Add version comparison
+  - [ ] Support collaborative editing
 
-- [ ] **Tab Display**
-  - [ ] Implement Ultimate Guitar compatible viewer
-  - [ ] Add template-based rendering
-  - [ ] Add basic playback controls
-  - [ ] Create tab editing interface
-  - [ ] Add zoom/scroll controls
+## Phase 3: Basic AI Integration
+- [ ] **Simple Note Detection**
+  - [ ] Implement basic pitch detection
+  - [ ] Add timing detection
+  - [ ] Create note-to-tab mapping
+  - [ ] Handle basic error correction
 
-## Phase 5: Storage & Integration
-- [ ] **Firebase Integration**
-  - [ ] Set up template storage
-  - [ ] Create tab document structure (based on UG format)
-  - [ ] Implement tab saving/loading
-  - [ ] Add user ownership/access control
-  - [ ] Set up tab metadata indexing
+- [ ] **Generation Pipeline**
+  - [ ] Set up AI processing queue
+  - [ ] Implement progress tracking
+  - [ ] Add generation status updates
+  - [ ] Create retry mechanism
 
-- [ ] **Local Storage**
-  - [ ] Implement template caching
-  - [ ] Add tab draft saving
-  - [ ] Create offline access system
-  - [ ] Add auto-save functionality
-  - [ ] Implement storage cleanup
+- [ ] **User Feedback**
+  - [ ] Add generation progress indicators
+  - [ ] Implement error reporting
+  - [ ] Create feedback collection
+  - [ ] Add tab accuracy rating
+
+## Phase 4: Advanced Features
+- [ ] **Advanced Audio Processing**
+  - [ ] Implement multi-instrument detection
+  - [ ] Add advanced noise reduction
+  - [ ] Support different audio formats
+  - [ ] Handle complex timing patterns
+
+- [ ] **Enhanced Generation**
+  - [ ] Add real-time tab generation
+  - [ ] Implement style detection
+  - [ ] Support multiple instruments
+  - [ ] Add technique detection
+
+- [ ] **Quality Assurance**
+  - [ ] Implement automated validation
+  - [ ] Add playback verification
+  - [ ] Create accuracy metrics
+  - [ ] Support manual corrections
 
 ## Technical Requirements
 
-### Audio Processing
-- Sample Rate: 44.1kHz
-- Format: WAV/MP3
-- Channels: Mono
-- Bit Depth: 16-bit
+### Tab Display
+- Monospace font rendering
+- Smooth scrolling support
+- Proper measure alignment
+- Section header formatting
 
-### Note Detection
-- Frequency Range: E2 (82.41 Hz) to E6 (1318.51 Hz)
-- Minimum Note Duration: 100ms
-- Pitch Detection Accuracy: ±20 cents
-
-### Template Requirements
-- Compatible with Ultimate Guitar JSON schema
-- Support for single-note melodies
-- Standard tuning support
-- Basic metadata fields
+### Storage
+- Efficient tab document structure
+- Quick read/write operations
 - Version control support
+- Proper indexing
 
 ### Performance Targets
-- Recording Latency: <50ms
-- Processing Time: <5s for 30s audio
-- Template Filling: <1s
-- Tab Rendering: <100ms
-- Storage: <10MB per minute of audio
+- Tab loading: <2s
+- Rendering: <100ms
+- Scrolling: 60fps
+- Storage: <100KB per tab
+
+### Security
+- User authentication
+- Tab access control
+- Edit permissions
+- Version history protection
 
 ## Dependencies
-- `just_audio`: Audio playback
-- `record`: Audio recording
-- `pitch_detector_dart`: Note detection
-- `firebase_storage`: Audio file storage
-- `cloud_firestore`: Tab data storage
-- `json_serializable`: JSON template handling
-- `path_provider`: File management
-- `permission_handler`: Audio permissions
+- `cloud_firestore`: Tab storage
+- `firebase_auth`: User authentication
+- `flutter_riverpod`: State management
+- `freezed`: Data models
+- `json_serializable`: JSON handling
 
 ## Notes
-- Focus on template compatibility
-- Ensure accurate template filling
-- Keep UI consistent with Ultimate Guitar style
-- Plan for template versioning
-- Document template usage patterns
-- Track accuracy metrics for improvement 
+- Focus on user experience first
+- Implement features incrementally
+- Maintain performance throughout
+- Collect user feedback regularly
+- Keep security in mind at each step 
