@@ -64,33 +64,39 @@ class TabRepository {
     }
   }
 
-  /// Helper method to extract measures from the nested map structure
+  /// Helper method to extract measures from the nested array structure
   List<Measure> _extractMeasures(Map<String, dynamic> content) {
     try {
-      final sections = content['sections'] as Map<String, dynamic>;
-      final firstSection = sections['0'] as Map<String, dynamic>;
-      final measures = firstSection['measures'] as Map<String, dynamic>;
-      final firstMeasure = measures['0'] as Map<String, dynamic>;
+      print('📝 Extracting measures from content');
+      final sections = content['sections'] as List<dynamic>;
+      final firstSection = sections[0] as Map<String, dynamic>;
+      final measures = firstSection['measures'] as List<dynamic>;
+      final firstMeasure = measures[0] as Map<String, dynamic>;
+      
+      print('📝 First measure data: $firstMeasure');
       
       return [
         Measure(
           index: firstMeasure['index'] as int? ?? 0,
           timeSignature: firstMeasure['timeSignature'] as String? ?? '4/4',
-          strings: _extractStrings(firstMeasure['strings'] as Map<String, dynamic>),
+          strings: _extractStrings(firstMeasure['strings'] as List<dynamic>),
         )
       ];
     } catch (e) {
-      print('Error extracting measures: $e');
+      print('❌ Error extracting measures: $e');
       return [];
     }
   }
 
-  /// Helper method to extract strings from the nested map structure
-  List<TabString> _extractStrings(Map<String, dynamic> stringsMap) {
+  /// Helper method to extract strings from the nested array structure
+  List<TabString> _extractStrings(List<dynamic> strings) {
     try {
-      final firstString = stringsMap['0'] as Map<String, dynamic>;
-      final notes = firstString['notes'] as Map<String, dynamic>;
-      final firstNote = notes['0'] as Map<String, dynamic>;
+      print('📝 Extracting strings: $strings');
+      final firstString = strings[0] as Map<String, dynamic>;
+      final notes = firstString['notes'] as List<dynamic>;
+      final firstNote = notes[0] as Map<String, dynamic>;
+      
+      print('📝 First note data: $firstNote');
       
       return [
         TabString(
@@ -105,7 +111,7 @@ class TabRepository {
         )
       ];
     } catch (e) {
-      print('Error extracting strings: $e');
+      print('❌ Error extracting strings: $e');
       return [];
     }
   }
