@@ -5,6 +5,8 @@ import 'dart:async';
 // Remove incorrect html import and add conditional dart:html import
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' if (dart.library.io) 'dart:io' as html;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:ui' as ui;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../domain/video/video_model.dart';
 import '../../../domain/video/video_repository.dart';
@@ -725,7 +727,52 @@ class _VideoItemState extends State<_VideoItem> with SingleTickerProviderStateMi
             ),
           ),
 
-          // Tab Button (bottom left)
+          // Generate Tab button
+          Positioned(
+            left: 16,
+            bottom: 135, // Position above View Tab button
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                child: Material(
+                  color: Colors.black.withOpacity(0.5),
+                  child: InkWell(
+                    onTap: () {
+                      // TODO: Implement tab generation
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,  // Using a different icon for Generate
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Generate Tab',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // View Tab button
           Positioned(
             left: 16,
             bottom: 90, // Position above the title/description
