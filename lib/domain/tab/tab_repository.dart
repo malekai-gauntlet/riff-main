@@ -71,17 +71,16 @@ class TabRepository {
       final sections = content['sections'] as List<dynamic>;
       final firstSection = sections[0] as Map<String, dynamic>;
       final measures = firstSection['measures'] as List<dynamic>;
-      final firstMeasure = measures[0] as Map<String, dynamic>;
       
-      print('📝 First measure data: $firstMeasure');
+      return measures.map((measureData) {
+        final measure = measureData as Map<String, dynamic>;
+        return Measure(
+          index: measure['index'] as int? ?? 0,
+          timeSignature: measure['timeSignature'] as String? ?? '4/4',
+          strings: _extractStrings(measure['strings'] as List<dynamic>),
+        );
+      }).toList();
       
-      return [
-        Measure(
-          index: firstMeasure['index'] as int? ?? 0,
-          timeSignature: firstMeasure['timeSignature'] as String? ?? '4/4',
-          strings: _extractStrings(firstMeasure['strings'] as List<dynamic>),
-        )
-      ];
     } catch (e) {
       print('❌ Error extracting measures: $e');
       return [];
@@ -92,24 +91,23 @@ class TabRepository {
   List<TabString> _extractStrings(List<dynamic> strings) {
     try {
       print('📝 Extracting strings: $strings');
-      final firstString = strings[0] as Map<String, dynamic>;
-      final notes = firstString['notes'] as List<dynamic>;
-      final firstNote = notes[0] as Map<String, dynamic>;
+      return strings.map((stringData) {
+        final tabString = stringData as Map<String, dynamic>;
+        final notes = tabString['notes'] as List<dynamic>;
+        
+        return TabString(
+          string: tabString['string'] as int? ?? 1,
+          notes: notes.map((noteData) {
+            final note = noteData as Map<String, dynamic>;
+            return Note(
+              fret: note['fret'] as int? ?? 0,
+              duration: (note['duration'] as num?)?.toDouble() ?? 1.0,
+              position: note['position'] as int? ?? 0,
+            );
+          }).toList(),
+        );
+      }).toList();
       
-      print('📝 First note data: $firstNote');
-      
-      return [
-        TabString(
-          string: firstString['string'] as int? ?? 1,
-          notes: [
-            Note(
-              fret: firstNote['fret'] as int? ?? 0,
-              duration: (firstNote['duration'] as num?)?.toDouble() ?? 1.0,
-              position: firstNote['position'] as int? ?? 0,
-            )
-          ],
-        )
-      ];
     } catch (e) {
       print('❌ Error extracting strings: $e');
       return [];

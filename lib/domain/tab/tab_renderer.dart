@@ -10,15 +10,13 @@ class TabRenderer {
     
     final buffer = StringBuffer();
     
-    // Add title and metadata
-    buffer.writeln('[${template.songInfo.title} - ${template.songInfo.artist}]');
+    // Add title with indentation
+    buffer.writeln('  [${template.songInfo.title}]');
     buffer.writeln();
-    
-    // Add tuning if non-standard
-    if (!_isStandardTuning(template.songInfo.tuning)) {
-      buffer.writeln('Tuning: ${template.songInfo.tuning.join(' ')}');
-      buffer.writeln();
-    }
+
+    // Add tuning with indentation
+    buffer.writeln('  Tuning: ${template.songInfo.tuning.join(' ')}');
+    buffer.writeln();
 
     // Process each measure
     var currentSection = '';
@@ -28,14 +26,20 @@ class TabRenderer {
       // Add section header if needed
       final section = _getSectionForMeasure(i);
       if (section != currentSection) {
+        // Add extra line break before new section (except for first section)
+        if (currentSection.isNotEmpty) {
+          buffer.writeln();  // Add extra line break between sections
+          buffer.writeln();  // Add second line break for spacing
+        }
         currentSection = section;
-        buffer.writeln('[$section]');
+        buffer.writeln('  [$section]');
         buffer.writeln();
       }
       
-      // Convert measure to visual format
+      // Convert measure to visual format and add indentation
       final visualMeasure = _renderMeasure(measure);
-      buffer.write(visualMeasure);
+      final indentedMeasure = visualMeasure.split('\n').map((line) => '  $line').join('\n');
+      buffer.write(indentedMeasure);
       
       // Add line breaks between groups of measures
       if ((i + 1) % 2 == 0) buffer.writeln();
@@ -62,19 +66,25 @@ class TabRenderer {
     final measureWidth = _calculateMeasureWidth(measure);
     print('📏 Measure width: $measureWidth');
     
+    // Add dashes to fill the width (using em dash)
     for (var string = 1; string <= 6; string++) {
-      stringBuffers[string]!.write('-' * measureWidth);
+      stringBuffers[string]!.write('—' * (measureWidth - 2)); // Using em dash instead of hyphen
     }
     
     // Place notes in correct positions
     for (var tabString in measure.strings) {
       print('🎵 Processing string ${tabString.string}:');
       final buffer = stringBuffers[tabString.string]!;
-      for (var note in tabString.notes) {
+      
+      // Sort notes by position to ensure proper order
+      final sortedNotes = tabString.notes.toList()
+        ..sort((a, b) => a.position.compareTo(b.position));
+      
+      for (var note in sortedNotes) {
+        // Scale the position to fit our wider measure
         final position = _calculateVisualPosition(note.position, measureWidth);
         print('  - Note: fret ${note.fret} at position $position');
         _placeNote(buffer, note.fret, position);
-        print('  - Buffer after placing note: ${buffer.toString()}');
       }
     }
     
@@ -117,24 +127,16 @@ class TabRenderer {
     print('  - Buffer after: ${buffer.toString()}');
   }
 
-  /// Calculates the visual position for a note
-  static int _calculateVisualPosition(int position, int measureWidth) {
-    // Add 1 to account for the | at the start
-    return position + 1;
-  }
-
   /// Calculates the width needed for a measure
   static int _calculateMeasureWidth(Measure measure) {
-    // Find the rightmost note position
-    var maxPosition = 0;
-    for (var string in measure.strings) {
-      for (var note in string.notes) {
-        maxPosition = maxPosition > note.position ? maxPosition : note.position;
-      }
-    }
-    
-    // Add some padding and account for measure bars
-    return maxPosition + 4;
+    // Use a width that matches Ultimate Guitar's style (about 25 characters)
+    return 27; // This will give us about 22 em dashes plus string label and bars
+  }
+
+  /// Calculates the visual position for a note
+  static int _calculateVisualPosition(int position, int measureWidth) {
+    // Map the position to our fixed width, leaving space for the string label and bars
+    return (position % (measureWidth)) + 1;
   }
 
   /// Determines section name based on measure index
@@ -145,10 +147,18 @@ class TabRenderer {
 
   /// Checks if tuning is standard EADGBE
   static bool _isStandardTuning(List<String> tuning) {
-    const standardTuning = ['E', 'A', 'D', 'G', 'B', 'E'];
+    // Add two spaces of indentation to each line
+    const standardTuning = [
+      '  E',
+      '  A',
+      '  D',
+      '  G',
+      '  B',
+      '  e'
+    ];
     if (tuning.length != standardTuning.length) return false;
     for (var i = 0; i < tuning.length; i++) {
-      if (tuning[i] != standardTuning[i]) return false;
+      if (tuning[i] != standardTuning[i].trim()) return false;
     }
     return true;
   }

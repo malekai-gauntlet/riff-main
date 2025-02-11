@@ -102,47 +102,25 @@ class _TabViewScreenState extends ConsumerState<TabViewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Tuning information
-                if (!_isStandardTuning(_tab!.songInfo.tuning))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Tuning',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _tab!.songInfo.tuning.join(' '),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontFamily: 'Courier',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                
                 // Tab content
-                Text(
-                  (() {
-                    print('\n📝 About to render tab...');
-                    final renderedTab = TabRenderer.renderTab(_tab!);
-                    print('📝 Rendered tab result:');
-                    print(renderedTab);
-                    return renderedTab;
-                  })(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontFamily: 'Courier',
+                Container(
+                  width: MediaQuery.of(context).size.width,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    (() {
+                      print('\n📝 About to render tab...');
+                      final renderedTab = TabRenderer.renderTab(_tab!);
+                      print('📝 Rendered tab result:');
+                      print(renderedTab);
+                      return renderedTab;
+                    })(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontFamily: 'Courier',
+                      height: 1.5,
+                      letterSpacing: 1.0,
+                    ),
                   ),
                 ),
               ],
